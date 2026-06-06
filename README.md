@@ -14,6 +14,14 @@ Run JavaScript inside a real browser page from the command line.
 npm install --global inpagerun
 ```
 
+## Prepare
+
+Before the first run, install Chromium for Playwright:
+
+```bash
+npx playwright install chromium
+```
+
 ## Usage
 
 ```bash
