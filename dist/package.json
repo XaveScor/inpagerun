@@ -1,0 +1,32 @@
+{
+  "name": "inpagerun",
+  "type": "commonjs",
+  "version": "0.0.1",
+  "types": "./__compiled__/cjs/src/index.d.ts",
+  "module": "./__compiled__/esm/src/index.mjs",
+  "main": "./__compiled__/cjs/src/index.js",
+  "description": "",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./__compiled__/esm/src/index.d.mts",
+        "default": "./__compiled__/esm/src/index.mjs"
+      },
+      "require": {
+        "types": "./__compiled__/cjs/src/index.d.ts",
+        "default": "./__compiled__/cjs/src/index.js"
+      },
+      "types": "./__compiled__/cjs/src/index.d.ts",
+      "default": "./__compiled__/cjs/src/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "oxfmt": "^0.53.0",
+    "smartbundle": "^0.14.1",
+    "typescript": "^5.9.3"
+  }
+}
