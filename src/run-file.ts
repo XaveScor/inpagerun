@@ -35,7 +35,8 @@ export async function runFile(options: RunFileOptions): Promise<void> {
     },
   };
 
-  const page = await browser.newPage();
+  // Some sites like youtube.com enforce CSP Trusted Types, which blocks Playwright's script injection without CSP bypass.
+  const page = await browser.newPage({ bypassCSP: true });
   void browserHandle;
 
   const result = await new Promise<RunFileResult>(async (resolve, reject) => {
