@@ -3,24 +3,18 @@
   "version": "0.0.1",
   "private": true,
   "description": "",
+  "keywords": [],
+  "license": "MIT",
+  "author": "",
   "bin": {
     "inpagerun": "./src/cli.ts"
   },
+  "type": "module",
   "exports": "./src/index.ts",
   "scripts": {
-    "build": "smartbundle"
+    "build": "smartbundle",
+    "prepare": "simple-git-hooks"
   },
-  "keywords": [],
-  "author": "",
-  "license": "MIT",
-  "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": "^11.5.2",
-      "onFail": "download"
-    }
-  },
-  "type": "module",
   "dependencies": {
     "commander": "^15.0.0",
     "playwright": "^1.60.0",
@@ -29,7 +23,18 @@
   "devDependencies": {
     "@types/node": "^25.9.2",
     "oxfmt": "^0.53.0",
+    "simple-git-hooks": "^2.13.1",
     "smartbundle": "^0.14.1",
     "typescript": "^5.9.3"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm exec oxfmt --check ."
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^11.5.2",
+      "onFail": "download"
+    }
   }
 }

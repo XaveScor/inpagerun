@@ -223,6 +223,9 @@ importers:
       oxfmt:
         specifier: ^0.53.0
         version: 0.53.0
+      simple-git-hooks:
+        specifier: ^2.13.1
+        version: 2.13.1
       smartbundle:
         specifier: ^0.14.1
         version: 0.14.1(@types/node@25.9.2)(lightningcss@1.32.0)(typescript@5.9.3)
@@ -998,6 +1001,10 @@ packages:
     engines: {node: '>=10'}
     hasBin: true
 
+  simple-git-hooks@2.13.1:
+    resolution: {integrity: sha512-WszCLXwT4h2k1ufIXAgsbiTOazqqevFCIncOuUBZJ91DdvWcC5+OFkluWRQPrcuSYd8fjq+o2y1QfWqYMoAToQ==}
+    hasBin: true
+
   smartbundle@0.14.1:
     resolution: {integrity: sha512-NMgjC7LBIw9SteclqMM8A3MSfdkDzR0LoQfp5eYIZjJfi4cVK9cPzFbxmuOGyp1DL/moFOIxf/urqsNrunFOfw==}
     hasBin: true
@@ -1695,6 +1702,8 @@ snapshots:
       fsevents: 2.3.3
 
   semver@7.8.2: {}
+
+  simple-git-hooks@2.13.1: {}
 
   smartbundle@0.14.1(@types/node@25.9.2)(lightningcss@1.32.0)(typescript@5.9.3):
     dependencies:
