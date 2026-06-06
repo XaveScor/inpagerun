@@ -84,42 +84,82 @@ export async function bundle(options: BundleOptions): Promise<BundleArtifact> {
 }
 
 function createEntrySource(code: string): string {
-  const serializedCode = JSON.stringify(code);
+  const serializedCode = JSON.stringify(`${code}\n//# sourceURL=inpagerun-user-code-module.js`);
 
   return `
 const source = ${serializedCode};
 
-async function runAsExpression() {
-  return await new Function(
-    "return (async () => (\\n" + source + "\\n))();\\n//# sourceURL=inpagerun-user-code-expression.js"
-  )();
-}
+async function runModule() {
+  const moduleUrl = URL.createObjectURL(new Blob([source], { type: "text/javascript" }));
 
-async function runAsBody() {
-  return await new Function(
-    "return (async () => {\\n" + source + "\\n})();\\n//# sourceURL=inpagerun-user-code-body.js"
-  )();
+  try {
+    await import(/* @vite-ignore */ moduleUrl);
+  } finally {
+    URL.revokeObjectURL(moduleUrl);
+  }
 }
 
 async function report(payload) {
   await window.__inpagerunDone(payload);
 }
 
+function formatValue(value) {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (value instanceof Error) {
+    return value.stack ?? value.name + ": " + value.message;
+  }
+
+  try {
+    const serialized = JSON.stringify(value, null, 2);
+
+    if (serialized !== undefined) {
+      return serialized;
+    }
+  } catch {
+  }
+
+  return String(value);
+}
+
+async function forwardConsole(type, args) {
+  const text = args.map((value) => formatValue(value)).join(" ");
+  await window.__inpagerunConsole({ type, text });
+}
+
+async function withForwardedConsole(run) {
+  const originalConsole = globalThis.console;
+  const forwardedConsole = Object.create(originalConsole);
+  const pending = new Set();
+
+  for (const type of ["debug", "error", "info", "log", "warn"]) {
+    forwardedConsole[type] = (...args) => {
+      const task = forwardConsole(type, args);
+      pending.add(task);
+      void task.finally(() => {
+        pending.delete(task);
+      });
+    };
+  }
+
+  globalThis.console = forwardedConsole;
+
+  try {
+    await run();
+    await Promise.all(pending);
+  } finally {
+    globalThis.console = originalConsole;
+  }
+}
+
 void (async () => {
   try {
-    let value;
-
-    try {
-      value = await runAsExpression();
-    } catch (error) {
-      if (!(error instanceof SyntaxError)) {
-        throw error;
-      }
-
-      value = await runAsBody();
-    }
-
-    await report({ ok: true, value });
+    await withForwardedConsole(async () => {
+      await runModule();
+    });
+    await report({ ok: true });
   } catch (error) {
     const normalized = error instanceof Error
       ? { name: error.name, message: error.message, stack: error.stack }

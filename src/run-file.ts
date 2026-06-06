@@ -1,8 +1,14 @@
 import { chromium } from "playwright";
 
+export type RunFileConsoleMessage = {
+  type: string;
+  text: string;
+};
+
 export type RunFileOptions = {
   url: string;
   file: string;
+  onConsole?(message: RunFileConsoleMessage): Promise<void> | void;
 };
 
 type RunFileError = {
@@ -14,14 +20,13 @@ type RunFileError = {
 type RunFileResult =
   | {
       ok: true;
-      value: unknown;
     }
   | {
       ok: false;
       error: RunFileError;
     };
 
-export async function runFile(options: RunFileOptions): Promise<unknown> {
+export async function runFile(options: RunFileOptions): Promise<void> {
   const browser = await chromium.launch();
 
   await using browserHandle = {
@@ -50,6 +55,10 @@ export async function runFile(options: RunFileOptions): Promise<unknown> {
         finish(() => resolve(payload));
       });
 
+      await page.exposeFunction("__inpagerunConsole", async (message: RunFileConsoleMessage) => {
+        await options.onConsole?.(message);
+      });
+
       await page.goto(options.url, { waitUntil: "load" });
       await page.addScriptTag({ path: options.file });
     } catch (error) {
@@ -57,11 +66,9 @@ export async function runFile(options: RunFileOptions): Promise<unknown> {
     }
   });
 
-  if (result.ok) {
-    return result.value;
+  if (!result.ok) {
+    throw createRunFileError(result.error);
   }
-
-  throw createRunFileError(result.error);
 }
 
 function createRunFileError(error: RunFileError): Error {
