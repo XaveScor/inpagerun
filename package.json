@@ -13,6 +13,9 @@
   "exports": "./src/index.ts",
   "scripts": {
     "build": "smartbundle",
+    "fmt": "oxfmt .",
+    "test:types": "tsc --noEmit",
+    "test:fmt": "oxfmt --check .",
     "prepare": "simple-git-hooks"
   },
   "dependencies": {
@@ -28,7 +31,7 @@
     "typescript": "^5.9.3"
   },
   "simple-git-hooks": {
-    "pre-commit": "pnpm exec oxfmt --check ."
+    "pre-commit": "pnpm fmt && pnpm test:types"
   },
   "devEngines": {
     "packageManager": {
