@@ -7,6 +7,7 @@ import { startDevServer } from "./helpers/dev-server";
 describe("runCode", () => {
   it.each([
     ["console-log", "console-log-ok"],
+    ["awaited-timeout", "awaited-timeout-ok"],
     ["static-import", "static-import-ok"],
     ["dynamic-import", "dynamic-import-ok"],
   ] as const)("runs the %s case", async (caseName, expectedText) => {

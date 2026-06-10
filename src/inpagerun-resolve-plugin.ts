@@ -40,7 +40,7 @@ export function inpagerunResolvePlugin(options: { code: string; userModuleFile: 
 }
 
 function createUserCodeSource(code: string): string {
-  return `${code}\n//# sourceURL=inpagerun-user-code-module.js`;
+  return `${code}\nexport {};\n//# sourceURL=inpagerun-user-code-module.js`;
 }
 
 function isNodeBuiltin(source: string): boolean {

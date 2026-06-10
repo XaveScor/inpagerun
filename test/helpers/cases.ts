@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 export type TestCaseName =
   | "console-log"
+  | "awaited-timeout"
   | "static-import"
   | "dynamic-import"
   | "typescript-file-import"
