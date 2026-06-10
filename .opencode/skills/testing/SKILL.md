@@ -1,9 +1,9 @@
 ---
-name: inpagerun-testing
+name: testing
 description: Use when writing or modifying inpagerun tests, test fixtures under test/cases, Vitest integration tests, CLI behavior tests, or runCode coverage.
 ---
 
-# inpagerun-testing
+# Testing
 
 Use this when writing tests for this repository.
 
