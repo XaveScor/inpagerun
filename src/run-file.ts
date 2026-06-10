@@ -60,7 +60,7 @@ export async function runFile(options: RunFileOptions): Promise<void> {
         await options.onConsole?.(message);
       });
 
-      await page.goto(options.url, { waitUntil: "load" });
+      await page.goto(normalizePageUrl(options.url), { waitUntil: "load" });
       await page.addScriptTag({ path: options.file });
     } catch (error) {
       finish(() => reject(error));
@@ -70,6 +70,20 @@ export async function runFile(options: RunFileOptions): Promise<void> {
   if (!result.ok) {
     throw createRunFileError(result.error);
   }
+}
+
+function normalizePageUrl(url: string): string {
+  const trimmedUrl = url.trim();
+
+  if (/^[a-zA-Z][a-zA-Z\d+.-]*:/.test(trimmedUrl)) {
+    return trimmedUrl;
+  }
+
+  if (trimmedUrl.startsWith("//")) {
+    return `https:${trimmedUrl}`;
+  }
+
+  return `https://${trimmedUrl}`;
 }
 
 function createRunFileError(error: RunFileError): Error {
