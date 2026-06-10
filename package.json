@@ -14,6 +14,7 @@
   "scripts": {
     "build": "smartbundle",
     "fmt": "oxfmt .",
+    "test:integration": "vitest run --config vitest.config.ts",
     "test:types": "tsc --noEmit",
     "test:fmt": "oxfmt --check .",
     "prepare": "simple-git-hooks"
@@ -28,7 +29,8 @@
     "oxfmt": "^0.53.0",
     "simple-git-hooks": "^2.13.1",
     "smartbundle": "^0.14.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^3.0.0"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm fmt && pnpm test:types"

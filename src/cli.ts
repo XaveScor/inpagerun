@@ -1,11 +1,16 @@
+import type { Writable } from "node:stream";
+import { pathToFileURL } from "node:url";
 import { Command } from "commander";
 import { runCode } from "./run-code";
 import type { RunFileConsoleMessage } from "./run-file";
 
-type CliOptions = {
+export type CliOptions = {
   url: string;
   code: string;
+  cwd?: string;
   debug?: boolean;
+  stdout?: Writable;
+  stderr?: Writable;
 };
 
 const program = new Command()
@@ -15,44 +20,74 @@ const program = new Command()
   .requiredOption("-c, --code <code>", "JavaScript code to run in the page")
   .option("--debug", "Forward browser console.debug output to stdout")
   .action(async (options: CliOptions) => {
-    await runCode({
-      code: options.code,
-      onConsole(message) {
-        writeConsoleMessage(message, options.debug === true);
-      },
-      url: options.url,
-    });
+    await runCli(options);
   });
 
-void main();
+if (isMainModule()) {
+  void main();
+}
+
+export async function runCli(options: CliOptions): Promise<void> {
+  const stdout = options.stdout ?? process.stdout;
+  const stderr = options.stderr ?? process.stderr;
+
+  await runCode({
+    code: options.code,
+    cwd: options.cwd,
+    onConsole(message) {
+      return writeConsoleMessage(message, {
+        debugEnabled: options.debug === true,
+        stderr,
+        stdout,
+      });
+    },
+    url: options.url,
+  });
+}
 
 async function main(): Promise<void> {
   try {
     await program.parseAsync(process.argv);
   } catch (error) {
-    console.error(formatError(error));
+    process.stderr.write(`${formatError(error)}\n`);
     process.exitCode = 1;
   }
 }
 
-function writeConsoleMessage(message: RunFileConsoleMessage, debugEnabled: boolean): void {
+async function writeConsoleMessage(
+  message: RunFileConsoleMessage,
+  options: { debugEnabled: boolean; stdout: Writable; stderr: Writable },
+): Promise<void> {
   switch (message.type) {
     case "debug":
-      if (!debugEnabled) {
+      if (!options.debugEnabled) {
         return;
       }
 
-      console.log(message.text === "" ? "[DEBUG]" : `[DEBUG] ${message.text}`);
+      await writeLine(options.stdout, message.text === "" ? "[DEBUG]" : `[DEBUG] ${message.text}`);
       return;
     case "error":
-      console.error(message.text);
+      await writeLine(options.stderr, message.text);
       return;
     case "warn":
-      console.warn(message.text);
+      await writeLine(options.stderr, message.text);
       return;
     default:
-      console.log(message.text);
+      await writeLine(options.stdout, message.text);
   }
+}
+
+function writeLine(stream: Writable, text: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    stream.write(`${text}\n`, (error?: Error | null) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+
+      resolve();
+    });
+  });
 }
 
 function formatError(error: unknown): string {
@@ -61,4 +96,8 @@ function formatError(error: unknown): string {
   }
 
   return String(error);
+}
+
+function isMainModule(): boolean {
+  return process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 }

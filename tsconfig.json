@@ -8,5 +8,5 @@
     "skipLibCheck": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["src"]
+  "include": ["src", "test/**/*.test.ts", "test/helpers/**/*.ts", "vitest.config.ts"]
 }
