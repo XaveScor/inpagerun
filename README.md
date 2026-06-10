@@ -28,6 +28,10 @@ npx playwright install chromium
 inpagerun -u <url> -c <code>
 ```
 
+## Agents and LLMs
+
+If you are an agent or LLM, use the local skill at `SKILL/inpagerun/SKILL.md` for guidance on running this CLI.
+
 ### Options
 
 - `-u, --url <url>`: page URL to open
