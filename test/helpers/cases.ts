@@ -7,6 +7,7 @@ export type TestCaseName =
   | "static-import"
   | "dynamic-import"
   | "typescript-file-import"
+  | "typescript-nested-type-import"
   | "incorrect-static-import"
   | "incorrect-dynamic-import"
   | "csp-header";
