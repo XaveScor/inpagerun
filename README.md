@@ -30,7 +30,7 @@ inpagerun -u <url> -c <code>
 
 ## Agents and LLMs
 
-If you are an agent or LLM, use the local skill at `SKILL/inpagerun/SKILL.md` for guidance on running this CLI.
+If you are an agent or LLM, use the [inpagerun skill](https://github.com/XaveScor/inpagerun/blob/master/SKILL/inpagerun/SKILL.md) for guidance on running this CLI.
 
 ### Options
 

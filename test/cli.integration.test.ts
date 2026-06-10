@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { runCli } from "../src/cli";
+import { getCliHelp, runCli } from "../src/cli";
 import { getCaseDir, readCaseCode, type TestCaseName } from "./helpers/cases";
 import { startDevServer } from "./helpers/dev-server";
 import { createMemoryWritable } from "./helpers/streams";
 
 describe("runCli", () => {
+  it("includes the skill URL in help output", () => {
+    expect(getCliHelp()).toContain(
+      "Agent and LLM guidance: https://github.com/XaveScor/inpagerun/blob/master/SKILL/inpagerun/SKILL.md",
+    );
+  });
+
   it.each([
     ["console-log", "console-log-ok"],
     ["static-import", "static-import-ok"],

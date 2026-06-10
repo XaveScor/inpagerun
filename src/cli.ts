@@ -13,15 +13,10 @@ export type CliOptions = {
   stderr?: Writable;
 };
 
-const program = new Command()
-  .name("inpagerun")
-  .usage("-u <url> -c <code>")
-  .requiredOption("-u, --url <url>", "Page URL")
-  .requiredOption("-c, --code <code>", "JavaScript code to run in the page")
-  .option("--debug", "Forward browser console.debug output to stdout")
-  .action(async (options: CliOptions) => {
-    await runCli(options);
-  });
+const AGENT_SKILL_HELP =
+  "Agent and LLM guidance: https://github.com/XaveScor/inpagerun/blob/master/SKILL/inpagerun/SKILL.md";
+
+const program = createProgram();
 
 if (isMainModule()) {
   void main();
@@ -43,6 +38,36 @@ export async function runCli(options: CliOptions): Promise<void> {
     },
     url: options.url,
   });
+}
+
+export function getCliHelp(): string {
+  let output = "";
+
+  createProgram()
+    .configureOutput({
+      writeErr(text) {
+        output += text;
+      },
+      writeOut(text) {
+        output += text;
+      },
+    })
+    .outputHelp();
+
+  return output;
+}
+
+function createProgram(): Command {
+  return new Command()
+    .name("inpagerun")
+    .usage("-u <url> -c <code>")
+    .requiredOption("-u, --url <url>", "Page URL")
+    .requiredOption("-c, --code <code>", "JavaScript code to run in the page")
+    .option("--debug", "Forward browser console.debug output to stdout")
+    .addHelpText("afterAll", `\n${AGENT_SKILL_HELP}`)
+    .action(async (options: CliOptions) => {
+      await runCli(options);
+    });
 }
 
 async function main(): Promise<void> {
