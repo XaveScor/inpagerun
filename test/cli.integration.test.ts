@@ -15,6 +15,7 @@ describe("runCli", () => {
     ["console-log", "console-log-ok"],
     ["static-import", "static-import-ok"],
     ["dynamic-import", "dynamic-import-ok"],
+    ["typescript-file-import", "typescript-file-import-ok"],
   ] as const)("writes stdout for the %s case", async (caseName, expectedText) => {
     const output = await runCliCase(caseName);
 

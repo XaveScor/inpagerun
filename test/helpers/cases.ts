@@ -6,6 +6,7 @@ export type TestCaseName =
   | "console-log"
   | "static-import"
   | "dynamic-import"
+  | "typescript-file-import"
   | "incorrect-static-import"
   | "incorrect-dynamic-import"
   | "csp-header";

@@ -1,8 +1,9 @@
-import { builtinModules } from "node:module";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { build, type Plugin } from "vite";
+import { build } from "vite";
+import { inpagerunDynamicImportPlugin } from "./inpagerun-dynamic-import-plugin";
+import { inpagerunResolvePlugin, USER_MODULE_ID } from "./inpagerun-resolve-plugin";
 
 export type BundleOptions = {
   code: string;
@@ -16,16 +17,7 @@ export type BundleArtifact = {
 };
 
 const BUNDLE_FILE_NAME = "bundle.js";
-const USER_MODULE_ID = "virtual:inpagerun-user-code";
 const USER_MODULE_FILE_NAME = "__inpagerun_user_code__.ts";
-const NODE_BUILTINS = new Set(
-  builtinModules.flatMap((moduleName) => {
-    const normalized = moduleName.startsWith("node:")
-      ? moduleName.slice("node:".length)
-      : moduleName;
-    return [normalized, `node:${normalized}`];
-  }),
-);
 
 export async function bundle(options: BundleOptions): Promise<BundleArtifact> {
   const cwd = options.cwd ? resolve(options.cwd) : process.cwd();
@@ -44,7 +36,10 @@ export async function bundle(options: BundleOptions): Promise<BundleArtifact> {
       logLevel: "silent",
       publicDir: false,
       root: cwd,
-      plugins: [inpagerunPlugin({ code: options.code, userModuleFile })],
+      plugins: [
+        inpagerunResolvePlugin({ code: options.code, userModuleFile }),
+        inpagerunDynamicImportPlugin(),
+      ],
       build: {
         dynamicImportVarsOptions: {
           exclude: [/.*/],
@@ -166,105 +161,4 @@ void (async () => {
   }
 })();
 `;
-}
-
-function createUserCodeSource(code: string): string {
-  return `${code}\n//# sourceURL=inpagerun-user-code-module.js`;
-}
-
-function inpagerunPlugin(options: { code: string; userModuleFile: string }): Plugin {
-  return {
-    name: "inpagerun",
-    enforce: "pre",
-    resolveId(source) {
-      if (source === USER_MODULE_ID) {
-        return options.userModuleFile;
-      }
-
-      if (isNodeBuiltin(source)) {
-        this.error(
-          `Node module "${source}" cannot be imported because inpagerun code runs in the browser page.`,
-        );
-      }
-
-      return null;
-    },
-    load(id) {
-      if (id === options.userModuleFile) {
-        return createUserCodeSource(options.code);
-      }
-
-      return null;
-    },
-    transform(code, _id, options) {
-      if (!isJavaScriptModuleType(options?.moduleType)) {
-        return null;
-      }
-
-      if (!code.includes("import")) {
-        return null;
-      }
-
-      rejectNonLiteralDynamicImports(this.parse(code), (position) => {
-        this.error(
-          "Dynamic imports must use a string literal so inpagerun can bundle them before running in the browser.",
-          position,
-        );
-      });
-
-      return null;
-    },
-  };
-}
-
-function isNodeBuiltin(source: string): boolean {
-  return NODE_BUILTINS.has(source);
-}
-
-function isJavaScriptModuleType(moduleType: string | undefined): boolean {
-  return moduleType === undefined || ["js", "jsx", "ts", "tsx"].includes(moduleType);
-}
-
-type AstNode = {
-  type?: string;
-  source?: AstNode;
-  value?: unknown;
-  start?: number;
-  [key: string]: unknown;
-};
-
-function rejectNonLiteralDynamicImports(ast: unknown, onError: (position?: number) => never): void {
-  walkAst(ast, (node) => {
-    if (node.type !== "ImportExpression") {
-      return;
-    }
-
-    if (node.source?.type === "Literal" && typeof node.source.value === "string") {
-      return;
-    }
-
-    onError(node.source?.start ?? node.start);
-  });
-}
-
-function walkAst(node: unknown, visit: (node: AstNode) => void): void {
-  if (!isAstNode(node)) {
-    return;
-  }
-
-  visit(node);
-
-  for (const value of Object.values(node)) {
-    if (Array.isArray(value)) {
-      for (const item of value) {
-        walkAst(item, visit);
-      }
-    } else if (isAstNode(value)) {
-      walkAst(value, visit);
-    }
-  }
-}
-
-function isAstNode(value: unknown): value is AstNode {
-  return typeof value === "object" && value !== null && "type" in value;
 }
