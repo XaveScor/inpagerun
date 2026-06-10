@@ -1,5 +1,4 @@
 import type { Writable } from "node:stream";
-import { pathToFileURL } from "node:url";
 import { Command } from "commander";
 import { runCode } from "./run-code";
 import type { RunFileConsoleMessage } from "./run-file";
@@ -15,12 +14,6 @@ export type CliOptions = {
 
 const AGENT_SKILL_HELP =
   "Agent and LLM guidance: https://github.com/XaveScor/inpagerun/blob/master/SKILL/inpagerun/SKILL.md";
-
-const program = createProgram();
-
-if (isMainModule()) {
-  void main();
-}
 
 export async function runCli(options: CliOptions): Promise<void> {
   const stdout = options.stdout ?? process.stdout;
@@ -70,9 +63,9 @@ function createProgram(): Command {
     });
 }
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   try {
-    await program.parseAsync(process.argv);
+    await createProgram().parseAsync(process.argv);
   } catch (error) {
     process.stderr.write(`${formatError(error)}\n`);
     process.exitCode = 1;
@@ -121,8 +114,4 @@ function formatError(error: unknown): string {
   }
 
   return String(error);
-}
-
-function isMainModule(): boolean {
-  return process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 }

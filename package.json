@@ -7,7 +7,7 @@
   "license": "MIT",
   "author": "",
   "bin": {
-    "inpagerun": "./src/cli.ts"
+    "inpagerun": "./src/bin.ts"
   },
   "type": "module",
   "exports": "./src/index.ts",
