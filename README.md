@@ -68,6 +68,12 @@ Run async code in the page:
 inpagerun -u https://example.com -c "console.log(await fetch('/').then((response) => response.status))"
 ```
 
+Import local code:
+
+```bash
+inpagerun -u https://example.com -c "const data = await import('./data.js'); console.log(data.default)"
+```
+
 Print an object:
 
 ```bash
@@ -86,6 +92,9 @@ inpagerun -u https://example.com -c "const h1 = document.querySelector('h1'); co
 - Your code runs inside that browser page, not in Node.js.
 - You can use DOM APIs like `document`, `window`, and `fetch`.
 - Async code works, so `await` is allowed.
+- Static imports and string-literal dynamic imports are bundled before your code runs.
+- Dynamic imports must use a string literal, for example `await import("./data.js")`.
+- Node.js built-in modules like `fs` and `node:path` are not supported.
 - `--code` runs as statements. The CLI does not print the last expression value.
 - Top-level `return` is not supported. Use `console.*` to print values.
 

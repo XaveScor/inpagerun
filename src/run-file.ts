@@ -61,7 +61,7 @@ export async function runFile(options: RunFileOptions): Promise<void> {
       });
 
       await page.goto(normalizePageUrl(options.url), { waitUntil: "load" });
-      await page.addScriptTag({ path: options.file });
+      await page.addScriptTag({ path: options.file, type: "module" });
     } catch (error) {
       finish(() => reject(error));
     }
