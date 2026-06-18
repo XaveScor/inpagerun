@@ -1,10 +1,16 @@
+import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { getCliHelp, runCli } from "../src/cli";
+import { getCliHelp } from "../src/cli";
+import { runCloseCommand } from "../src/commands/close";
+import { runOnceCommand } from "../src/commands/once";
+import { runOpenCommand } from "../src/commands/open";
+import { runPersistentRunCommand } from "../src/commands/run";
 import { getCaseDir, readCaseCode, type TestCaseName } from "./helpers/cases";
 import { startDevServer } from "./helpers/dev-server";
 import { createMemoryWritable } from "./helpers/streams";
+import { createTestTmpdir } from "./helpers/tmpdir";
 
-describe("runCli", () => {
+describe("CLI commands", () => {
   it("includes the skill URL in help output", () => {
     expect(getCliHelp()).toContain(
       "Agent and LLM guidance: https://github.com/XaveScor/inpagerun/blob/master/SKILL/inpagerun/SKILL.md",
@@ -17,7 +23,7 @@ describe("runCli", () => {
     ["dynamic-import", "dynamic-import-ok"],
     ["typescript-file-import", "typescript-file-import-ok"],
     ["typescript-nested-type-import", "typescript-nested-type-import-ok"],
-  ] as const)("writes stdout for the %s case", async (caseName, expectedText) => {
+  ] as const)("writes stdout for the %s case in once mode", async (caseName, expectedText) => {
     const output = await runCliCase(caseName);
 
     expect(output.stdout).toBe(`${expectedText}\n`);
@@ -44,6 +50,159 @@ describe("runCli", () => {
     expect(output.stdout).toBe("csp-header-ok\n");
     expect(output.stderr).toBe("");
   });
+
+  it("keeps page state between persistent runs", async () => {
+    const caseDir = getCaseDir("console-log");
+    const server = await startDevServer({ root: caseDir });
+    const tmpdir = await createTestTmpdir();
+    const stdout = createMemoryWritable();
+    const stderr = createMemoryWritable();
+
+    try {
+      await runOpenCommand([server.url], {
+        cwd: caseDir,
+        stderr: stderr.stream,
+        stdout: stdout.stream,
+        tmpdir: tmpdir.path,
+      });
+
+      const id = stdout.output().trim();
+      expect(id).toMatch(/^page_[a-f0-9]{6}$/);
+
+      await runPersistentRunCommand(
+        ["--id", id, "--code", "(globalThis as any).__inpagerunValue = 41;"],
+        {
+          cwd: caseDir,
+          stderr: stderr.stream,
+          stdout: stdout.stream,
+          tmpdir: tmpdir.path,
+        },
+      );
+      await runPersistentRunCommand(
+        ["--id", id, "--code", "console.log((globalThis as any).__inpagerunValue + 1);"],
+        {
+          cwd: caseDir,
+          stderr: stderr.stream,
+          stdout: stdout.stream,
+          tmpdir: tmpdir.path,
+        },
+      );
+      await runCloseCommand(["--id", id], {
+        cwd: caseDir,
+        stderr: stderr.stream,
+        stdout: stdout.stream,
+        tmpdir: tmpdir.path,
+      });
+
+      expect(stdout.output()).toBe(`${id}\n42\n${server.url} has closed\n`);
+      expect(stderr.output()).toBe("");
+    } finally {
+      await server.close();
+      await tmpdir.close();
+    }
+  });
+
+  it("keeps a window value written by an earlier persistent run", async () => {
+    const caseDir = getCaseDir("console-log");
+    const server = await startDevServer({ root: caseDir });
+    const tmpdir = await createTestTmpdir();
+    const stdout = createMemoryWritable();
+    const stderr = createMemoryWritable();
+    const value = randomUUID();
+    let id: string | undefined;
+
+    try {
+      await runOpenCommand([server.url], {
+        cwd: caseDir,
+        stderr: stderr.stream,
+        stdout: stdout.stream,
+        tmpdir: tmpdir.path,
+      });
+
+      id = stdout.output().trim();
+
+      await runPersistentRunCommand(
+        ["--id", id, "--code", `(window as any).inpagerun_test = ${JSON.stringify(value)};`],
+        {
+          cwd: caseDir,
+          stderr: stderr.stream,
+          stdout: stdout.stream,
+          tmpdir: tmpdir.path,
+        },
+      );
+      await runPersistentRunCommand(
+        ["--id", id, "--code", "console.log((window as any).inpagerun_test);"],
+        {
+          cwd: caseDir,
+          stderr: stderr.stream,
+          stdout: stdout.stream,
+          tmpdir: tmpdir.path,
+        },
+      );
+
+      expect(stdout.output()).toBe(`${id}\n${value}\n`);
+      expect(stderr.output()).toBe("");
+    } finally {
+      if (id) {
+        await runCloseCommand(["--id", id], {
+          cwd: caseDir,
+          stderr: stderr.stream,
+          stdout: createMemoryWritable().stream,
+          tmpdir: tmpdir.path,
+        }).catch(() => {});
+      }
+
+      await server.close();
+      await tmpdir.close();
+    }
+  });
+
+  it("runs persistent code when the page sends a restrictive CSP header", async () => {
+    const caseDir = getCaseDir("csp-header");
+    const server = await startDevServer({
+      headers: {
+        "Content-Security-Policy": "default-src 'self'; script-src 'none'",
+      },
+      root: caseDir,
+    });
+    const tmpdir = await createTestTmpdir();
+    const stdout = createMemoryWritable();
+    const stderr = createMemoryWritable();
+    let id: string | undefined;
+
+    try {
+      await runOpenCommand([server.url], {
+        cwd: caseDir,
+        stderr: stderr.stream,
+        stdout: stdout.stream,
+        tmpdir: tmpdir.path,
+      });
+
+      id = stdout.output().trim();
+
+      await runPersistentRunCommand(["--id", id, "--code", "console.log('persistent-csp-ok');"], {
+        cwd: caseDir,
+        stderr: stderr.stream,
+        stdout: stdout.stream,
+        tmpdir: tmpdir.path,
+      });
+
+      expect(stdout.output()).toBe(`${id}\npersistent-csp-ok\n`);
+      expect(stderr.output()).toBe("");
+    } finally {
+      if (id) {
+        await runCloseCommand(["--id", id], {
+          cwd: caseDir,
+          stderr: stderr.stream,
+          stdout: createMemoryWritable().stream,
+          tmpdir: tmpdir.path,
+        }).catch(() => {});
+      }
+
+      await server.close();
+      await tmpdir.close();
+    }
+  });
 });
 
 async function runCliCase(
@@ -53,19 +212,20 @@ async function runCliCase(
   const caseDir = getCaseDir(caseName);
   const code = await readCaseCode(caseName);
   const server = await startDevServer({ headers, root: caseDir });
+  const tmpdir = await createTestTmpdir();
   const stdout = createMemoryWritable();
   const stderr = createMemoryWritable();
 
   try {
-    await runCli({
-      code,
+    await runOnceCommand(["-u", server.url, "-c", code], {
       cwd: caseDir,
       stderr: stderr.stream,
       stdout: stdout.stream,
-      url: server.url,
+      tmpdir: tmpdir.path,
     });
   } finally {
     await server.close();
+    await tmpdir.close();
   }
 
   return { stderr: stderr.output(), stdout: stdout.output() };

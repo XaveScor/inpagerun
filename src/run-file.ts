@@ -1,4 +1,7 @@
-import { chromium } from "playwright";
+import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import { chromium, type Page } from "playwright";
+import { normalizePageUrl } from "./url";
 
 export type RunFileConsoleMessage = {
   type: string;
@@ -8,7 +11,20 @@ export type RunFileConsoleMessage = {
 export type RunFileOptions = {
   url: string;
   file: string;
+  callbackNames?: RunFileCallbackNames;
   onConsole?(message: RunFileConsoleMessage): Promise<void> | void;
+};
+
+export type RunFileInPageOptions = {
+  page: Page;
+  file: string;
+  callbackNames?: RunFileCallbackNames;
+  onConsole?(message: RunFileConsoleMessage): Promise<void> | void;
+};
+
+export type RunFileCallbackNames = {
+  consoleFunctionName: string;
+  doneFunctionName: string;
 };
 
 type RunFileError = {
@@ -35,9 +51,21 @@ export async function runFile(options: RunFileOptions): Promise<void> {
     },
   };
 
-  // Some sites like youtube.com enforce CSP Trusted Types, which blocks Playwright's script injection without CSP bypass.
   const page = await browser.newPage({ bypassCSP: true });
   void browserHandle;
+
+  await page.goto(normalizePageUrl(options.url), { waitUntil: "load" });
+
+  return await runFileInPage({
+    file: options.file,
+    callbackNames: options.callbackNames,
+    onConsole: options.onConsole,
+    page,
+  });
+}
+
+export async function runFileInPage(options: RunFileInPageOptions): Promise<void> {
+  const callbackNames = options.callbackNames ?? createRunFileCallbackNames();
 
   const result = await new Promise<RunFileResult>(async (resolve, reject) => {
     let settled = false;
@@ -52,16 +80,21 @@ export async function runFile(options: RunFileOptions): Promise<void> {
     };
 
     try {
-      await page.exposeFunction("__inpagerunDone", async (payload: RunFileResult) => {
-        finish(() => resolve(payload));
-      });
+      await options.page.exposeFunction(
+        callbackNames.doneFunctionName,
+        async (payload: RunFileResult) => {
+          finish(() => resolve(payload));
+        },
+      );
 
-      await page.exposeFunction("__inpagerunConsole", async (message: RunFileConsoleMessage) => {
-        await options.onConsole?.(message);
-      });
+      await options.page.exposeFunction(
+        callbackNames.consoleFunctionName,
+        async (message: RunFileConsoleMessage) => {
+          await options.onConsole?.(message);
+        },
+      );
 
-      await page.goto(normalizePageUrl(options.url), { waitUntil: "load" });
-      await page.addScriptTag({ path: options.file, type: "module" });
+      await evaluateFileInPage(options.page, options.file);
     } catch (error) {
       finish(() => reject(error));
     }
@@ -72,18 +105,35 @@ export async function runFile(options: RunFileOptions): Promise<void> {
   }
 }
 
-function normalizePageUrl(url: string): string {
-  const trimmedUrl = url.trim();
+export function createRunFileCallbackNames(): RunFileCallbackNames {
+  const runId = randomUUID().replaceAll("-", "_");
 
-  if (/^[a-zA-Z][a-zA-Z\d+.-]*:/.test(trimmedUrl)) {
-    return trimmedUrl;
+  return {
+    consoleFunctionName: `__inpagerunConsole_${runId}`,
+    doneFunctionName: `__inpagerunDone_${runId}`,
+  };
+}
+
+async function evaluateFileInPage(page: Page, file: string): Promise<void> {
+  const session = await page.context().newCDPSession(page);
+
+  try {
+    const result = (await session.send("Runtime.evaluate", {
+      awaitPromise: false,
+      expression: await readFile(file, "utf8"),
+      userGesture: true,
+    })) as { exceptionDetails?: { exception?: { description?: string }; text?: string } };
+
+    if (result.exceptionDetails) {
+      throw new Error(
+        result.exceptionDetails.exception?.description ??
+          result.exceptionDetails.text ??
+          "Failed to evaluate bundled code.",
+      );
+    }
+  } finally {
+    await session.detach().catch(() => {});
   }
-
-  if (trimmedUrl.startsWith("//")) {
-    return `https:${trimmedUrl}`;
-  }
-
-  return `https://${trimmedUrl}`;
 }
 
 function createRunFileError(error: RunFileError): Error {

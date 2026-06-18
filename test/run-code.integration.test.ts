@@ -3,6 +3,7 @@ import { runCode } from "../src/run-code";
 import type { RunFileConsoleMessage } from "../src/run-file";
 import { getCaseDir, readCaseCode, type TestCaseName } from "./helpers/cases";
 import { startDevServer } from "./helpers/dev-server";
+import { createTestTmpdir } from "./helpers/tmpdir";
 
 describe("runCode", () => {
   it.each([
@@ -44,6 +45,7 @@ async function runSuccessfulCase(
   const caseDir = getCaseDir(caseName);
   const code = await readCaseCode(caseName);
   const server = await startDevServer({ headers, root: caseDir });
+  const tmpdir = await createTestTmpdir();
   const messages: RunFileConsoleMessage[] = [];
 
   try {
@@ -53,10 +55,12 @@ async function runSuccessfulCase(
       onConsole(message) {
         messages.push(message);
       },
+      tmpdir: tmpdir.path,
       url: server.url,
     });
   } finally {
     await server.close();
+    await tmpdir.close();
   }
 
   return messages;
@@ -66,10 +70,12 @@ async function runFailingCase(caseName: TestCaseName): Promise<void> {
   const caseDir = getCaseDir(caseName);
   const code = await readCaseCode(caseName);
   const server = await startDevServer({ root: caseDir });
+  const tmpdir = await createTestTmpdir();
 
   try {
-    await runCode({ code, cwd: caseDir, url: server.url });
+    await runCode({ code, cwd: caseDir, tmpdir: tmpdir.path, url: server.url });
   } finally {
     await server.close();
+    await tmpdir.close();
   }
 }

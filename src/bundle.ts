@@ -8,6 +8,8 @@ import { inpagerunResolvePlugin, USER_MODULE_ID } from "./inpagerun-resolve-plug
 export type BundleOptions = {
   code: string;
   cwd?: string;
+  consoleFunctionName?: string;
+  doneFunctionName?: string;
 };
 
 export type BundleArtifact = {
@@ -28,7 +30,13 @@ export async function bundle(options: BundleOptions): Promise<BundleArtifact> {
 
   try {
     await mkdir(outDir, { recursive: true });
-    await writeFile(entryFile, createEntrySource());
+    await writeFile(
+      entryFile,
+      createEntrySource({
+        consoleFunctionName: options.consoleFunctionName ?? "__inpagerunConsole",
+        doneFunctionName: options.doneFunctionName ?? "__inpagerunDone",
+      }),
+    );
 
     await build({
       appType: "custom",
@@ -85,14 +93,20 @@ export async function bundle(options: BundleOptions): Promise<BundleArtifact> {
   };
 }
 
-function createEntrySource(): string {
+function createEntrySource(options: {
+  consoleFunctionName: string;
+  doneFunctionName: string;
+}): string {
   return `
+const doneFunctionName = ${JSON.stringify(options.doneFunctionName)};
+const consoleFunctionName = ${JSON.stringify(options.consoleFunctionName)};
+
 async function runModule() {
   await import("${USER_MODULE_ID}");
 }
 
 async function report(payload) {
-  await window.__inpagerunDone(payload);
+  await window[doneFunctionName](payload);
 }
 
 function formatValue(value) {
@@ -118,7 +132,7 @@ function formatValue(value) {
 
 async function forwardConsole(type, args) {
   const text = args.map((value) => formatValue(value)).join(" ");
-  await window.__inpagerunConsole({ type, text });
+  await window[consoleFunctionName]({ type, text });
 }
 
 async function withForwardedConsole(run) {

@@ -1,6 +1,6 @@
 ---
 name: testing
-description: Use when writing or modifying inpagerun tests, test fixtures under test/cases, Vitest integration tests, CLI behavior tests, or runCode coverage.
+description: Use when writing or modifying inpagerun tests, test fixtures under test/cases, Vitest integration tests, command-file CLI behavior tests, persistent page tests, or runCode coverage.
 ---
 
 # Testing
@@ -16,13 +16,15 @@ Use this when writing tests for this repository.
    - `index.html` as the browser page
    - local helper modules beside `code.ts`
    - add the case name to `TestCaseName` in `test/helpers/cases.ts`
-3. Do not spawn or execute the CLI in tests.
-4. Test CLI behavior by calling `runCli(...)` directly.
-5. Test API behavior by calling `runCode(...)` directly.
+3. Do not spawn or execute the CLI binary in tests.
+4. Write CLI behavior tests through command-like functions from `src/commands`.
+5. Pass argv exactly like command-line arguments, for example `runOnceCommand(["-u", url, "-c", code], context)`, `runOpenCommand([url], context)`, `runPersistentRunCommand(["--id", id, "--code", code], context)`, and `runCloseCommand(["--id", id], context)`.
+6. Give each browser-backed CLI test a unique `tmpdir` in `context`.
+7. Test API behavior by calling `runCode(...)` directly.
 
 ## Test Placement
 
-- Put CLI output tests in `test/cli.integration.test.ts`.
+- Put CLI routing and command output tests in `test/cli.integration.test.ts`.
 - Put API/browser execution tests in `test/run-code.integration.test.ts`.
 - Put browser fixtures in `test/cases/<case-name>/`.
 

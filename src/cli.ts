@@ -1,36 +1,42 @@
-import type { Writable } from "node:stream";
 import { Command } from "commander";
-import { runCode } from "./run-code";
-import type { RunFileConsoleMessage } from "./run-file";
-
-export type CliOptions = {
-  url: string;
-  code: string;
-  cwd?: string;
-  debug?: boolean;
-  stdout?: Writable;
-  stderr?: Writable;
-};
+import { writeLine } from "./console-output";
+import { runCloseCommand } from "./commands/close";
+import { runOnceCommand } from "./commands/once";
+import { runOpenCommand } from "./commands/open";
+import { runPersistentRunCommand } from "./commands/run";
+import { resolveCommandContext, type CommandContext } from "./commands/types";
 
 const AGENT_SKILL_HELP =
   "Agent and LLM guidance: https://github.com/XaveScor/inpagerun/blob/master/SKILL/inpagerun/SKILL.md";
 
-export async function runCli(options: CliOptions): Promise<void> {
-  const stdout = options.stdout ?? process.stdout;
-  const stderr = options.stderr ?? process.stderr;
+export async function runCli(argv: string[], context?: CommandContext): Promise<void> {
+  const resolvedContext = resolveCommandContext(context);
+  const [mode, ...rest] = argv;
 
-  await runCode({
-    code: options.code,
-    cwd: options.cwd,
-    onConsole(message) {
-      return writeConsoleMessage(message, {
-        debugEnabled: options.debug === true,
-        stderr,
-        stdout,
-      });
-    },
-    url: options.url,
-  });
+  switch (mode) {
+    case "once":
+      await runOnceCommand(rest, resolvedContext);
+      return;
+    case "open":
+      await runOpenCommand(rest, resolvedContext);
+      return;
+    case "close":
+      await runCloseCommand(rest, resolvedContext);
+      return;
+    case "--help":
+    case "-h":
+    case undefined:
+      await writeLine(resolvedContext.stdout, getCliHelp().trimEnd());
+      return;
+    default:
+      if (argv.includes("-u") || argv.includes("--url")) {
+        throw new Error(
+          "This syntax is no longer supported. Use: inpagerun once -u <url> -c <code>",
+        );
+      }
+
+      await runPersistentRunCommand(argv, resolvedContext);
+  }
 }
 
 export function getCliHelp(): string {
@@ -50,62 +56,31 @@ export function getCliHelp(): string {
   return output;
 }
 
-function createProgram(): Command {
-  return new Command()
-    .name("inpagerun")
-    .usage("-u <url> -c <code>")
-    .requiredOption("-u, --url <url>", "Page URL")
-    .requiredOption("-c, --code <code>", "JavaScript code to run in the page")
-    .option("--debug", "Forward browser console.debug output to stdout")
-    .addHelpText("afterAll", `\n${AGENT_SKILL_HELP}`)
-    .action(async (options: CliOptions) => {
-      await runCli(options);
-    });
-}
-
-export async function main(): Promise<void> {
+export async function main(argv = process.argv.slice(2)): Promise<void> {
   try {
-    await createProgram().parseAsync(process.argv);
+    await runCli(argv);
   } catch (error) {
     process.stderr.write(`${formatError(error)}\n`);
     process.exitCode = 1;
   }
 }
 
-async function writeConsoleMessage(
-  message: RunFileConsoleMessage,
-  options: { debugEnabled: boolean; stdout: Writable; stderr: Writable },
-): Promise<void> {
-  switch (message.type) {
-    case "debug":
-      if (!options.debugEnabled) {
-        return;
-      }
+function createProgram(): Command {
+  return new Command()
+    .name("inpagerun")
+    .usage("<command>")
+    .description("Run JavaScript inside real Chromium pages.")
+    .addHelpText(
+      "after",
+      `
+Commands:
+  inpagerun once -u <url> -c <code>
+  inpagerun open [--headed] [--debug] <url>
+  inpagerun --id <id> --code <code> [--debug]
+  inpagerun close --id <id>
 
-      await writeLine(options.stdout, message.text === "" ? "[DEBUG]" : `[DEBUG] ${message.text}`);
-      return;
-    case "error":
-      await writeLine(options.stderr, message.text);
-      return;
-    case "warn":
-      await writeLine(options.stderr, message.text);
-      return;
-    default:
-      await writeLine(options.stdout, message.text);
-  }
-}
-
-function writeLine(stream: Writable, text: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    stream.write(`${text}\n`, (error?: Error | null) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-
-      resolve();
-    });
-  });
+${AGENT_SKILL_HELP}`,
+    );
 }
 
 function formatError(error: unknown): string {
