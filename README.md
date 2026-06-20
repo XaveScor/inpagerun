@@ -19,7 +19,7 @@ npm install --global inpagerun
 Before the first run, install Chromium for Playwright:
 
 ```bash
-npx playwright install chromium
+npx playwright@1.61.0 install chromium
 ```
 
 ## Usage

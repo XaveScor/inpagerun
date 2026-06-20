@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { access, mkdir, mkdtemp, rm } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { createServer } from "node:net";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -14,6 +15,9 @@ import {
   type InpagerunState,
   writeState,
 } from "./state";
+
+const require = createRequire(import.meta.url);
+const playwrightPackage = require("playwright/package.json") as { version: string };
 
 export type EnsureBrowserOptions = {
   debug?(message: string): Promise<void> | void;
@@ -82,6 +86,7 @@ export async function closeDetachedBrowser(state: InpagerunState, tmpdir?: strin
 async function startDetachedBrowser(options: EnsureBrowserOptions): Promise<BrowserState> {
   const port = await getFreePort();
   const rootDir = getInpagerunTmpDir(options.tmpdir);
+  const executablePath = await getChromiumExecutablePath();
   await mkdir(rootDir, { recursive: true });
 
   const userDataDir = await mkdtemp(join(rootDir, "profile-"));
@@ -90,6 +95,8 @@ async function startDetachedBrowser(options: EnsureBrowserOptions): Promise<Brow
     `--user-data-dir=${userDataDir}`,
     "--no-first-run",
     "--no-default-browser-check",
+    "--password-store=basic",
+    "--use-mock-keychain",
   ];
 
   if (!options.headed) {
@@ -100,7 +107,7 @@ async function startDetachedBrowser(options: EnsureBrowserOptions): Promise<Brow
     `Starting ${options.headed ? "headed" : "headless"} Chromium at port ${port}`,
   );
 
-  const child = spawn(chromium.executablePath(), args, {
+  const child = spawn(executablePath, args, {
     detached: true,
     stdio: "ignore",
   });
@@ -115,6 +122,28 @@ async function startDetachedBrowser(options: EnsureBrowserOptions): Promise<Brow
     userDataDir,
     wsEndpoint,
   };
+}
+
+async function getChromiumExecutablePath(): Promise<string> {
+  const executablePath = chromium.executablePath();
+
+  try {
+    await access(executablePath);
+    return executablePath;
+  } catch {
+    throw new Error(
+      [
+        `Chromium executable for Playwright ${playwrightPackage.version} was not found:`,
+        executablePath,
+        "",
+        "Install it with:",
+        `  npx playwright@${playwrightPackage.version} install chromium`,
+        "",
+        "To inspect installed Playwright browsers:",
+        `  npx playwright@${playwrightPackage.version} install --list`,
+      ].join("\n"),
+    );
+  }
 }
 
 async function isBrowserStateUsable(browser: BrowserState): Promise<boolean> {

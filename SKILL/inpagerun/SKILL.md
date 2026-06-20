@@ -173,5 +173,5 @@ If a page id is unknown, open the page again with `inpagerun open <url>`.
 If the command fails before running code, ensure Playwright Chromium is installed:
 
 ```bash
-npx playwright install chromium
+npx playwright@1.61.0 install chromium
 ```
