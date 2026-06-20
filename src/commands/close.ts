@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import { writeLine } from "../console-output";
 import { closePersistentPage } from "../persistent-page";
-import { resolveCommandContext, type CommandContext } from "./types";
+import { parseCommand, resolveCommandContext, type CommandContext } from "./types";
 
 type CloseOptions = {
   id: string;
@@ -10,7 +10,7 @@ type CloseOptions = {
 export async function runCloseCommand(argv: string[], context?: CommandContext): Promise<void> {
   const resolvedContext = resolveCommandContext(context);
 
-  await createCloseProgram(resolvedContext).exitOverride().parseAsync(argv, { from: "user" });
+  await parseCommand(createCloseProgram(resolvedContext), argv);
 }
 
 function createCloseProgram(context: ReturnType<typeof resolveCommandContext>): Command {

@@ -1,3 +1,4 @@
+import type { Command } from "commander";
 import type { Writable } from "node:stream";
 
 export type CommandContext = {
@@ -21,4 +22,25 @@ export function resolveCommandContext(context: CommandContext = {}): ResolvedCom
     stdout: context.stdout ?? process.stdout,
     tmpdir: context.tmpdir,
   };
+}
+
+export async function parseCommand(program: Command, argv: string[]): Promise<void> {
+  try {
+    await program.exitOverride().parseAsync(argv, { from: "user" });
+  } catch (error) {
+    if (isCommanderHelpDisplayed(error)) {
+      return;
+    }
+
+    throw error;
+  }
+}
+
+function isCommanderHelpDisplayed(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "commander.helpDisplayed"
+  );
 }

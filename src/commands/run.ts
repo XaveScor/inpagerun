@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import { writeConsoleMessage } from "../console-output";
 import { runCodeInPersistentPage } from "../persistent-page";
-import { resolveCommandContext, type CommandContext } from "./types";
+import { parseCommand, resolveCommandContext, type CommandContext } from "./types";
 
 type RunOptions = {
   code: string;
@@ -15,7 +15,7 @@ export async function runPersistentRunCommand(
 ): Promise<void> {
   const resolvedContext = resolveCommandContext(context);
 
-  await createRunProgram(resolvedContext).exitOverride().parseAsync(argv, { from: "user" });
+  await parseCommand(createRunProgram(resolvedContext), argv);
 }
 
 function createRunProgram(context: ReturnType<typeof resolveCommandContext>): Command {

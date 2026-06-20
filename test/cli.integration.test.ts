@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { getCliHelp } from "../src/cli";
+import { getCliHelp, runCli } from "../src/cli";
 import { runCloseCommand } from "../src/commands/close";
 import { runOnceCommand } from "../src/commands/once";
 import { runOpenCommand } from "../src/commands/open";
@@ -15,6 +15,24 @@ describe("CLI commands", () => {
     expect(getCliHelp()).toContain(
       "Agent and LLM guidance: https://github.com/XaveScor/inpagerun/blob/master/SKILL/inpagerun/SKILL.md",
     );
+  });
+
+  it.each([
+    [["once", "--help"], "Usage: inpagerun once -u <url> -c <code>"],
+    [["open", "--help"], "Usage: inpagerun open [--headed] [--debug] <url>"],
+    [["close", "--help"], "Usage: inpagerun close --id <id>"],
+    [["--id", "page_000000", "--help"], "Usage: inpagerun --id <id> --code <code>"],
+  ] as const)("prints help for %s without throwing", async (argv, expectedText) => {
+    const stdout = createMemoryWritable();
+    const stderr = createMemoryWritable();
+
+    await runCli([...argv], {
+      stderr: stderr.stream,
+      stdout: stdout.stream,
+    });
+
+    expect(stdout.output()).toContain(expectedText);
+    expect(stderr.output()).toBe("");
   });
 
   it.each([

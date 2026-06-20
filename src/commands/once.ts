@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import { writeConsoleMessage } from "../console-output";
 import { runCode } from "../run-code";
-import { resolveCommandContext, type CommandContext } from "./types";
+import { parseCommand, resolveCommandContext, type CommandContext } from "./types";
 
 type OnceOptions = {
   code: string;
@@ -12,7 +12,7 @@ type OnceOptions = {
 export async function runOnceCommand(argv: string[], context?: CommandContext): Promise<void> {
   const resolvedContext = resolveCommandContext(context);
 
-  await createOnceProgram(resolvedContext).exitOverride().parseAsync(argv, { from: "user" });
+  await parseCommand(createOnceProgram(resolvedContext), argv);
 }
 
 export function getOnceHelp(): string {

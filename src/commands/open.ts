@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import { writeLine } from "../console-output";
 import { openPersistentPage } from "../persistent-page";
-import { resolveCommandContext, type CommandContext } from "./types";
+import { parseCommand, resolveCommandContext, type CommandContext } from "./types";
 
 type OpenOptions = {
   debug?: boolean;
@@ -11,7 +11,7 @@ type OpenOptions = {
 export async function runOpenCommand(argv: string[], context?: CommandContext): Promise<void> {
   const resolvedContext = resolveCommandContext(context);
 
-  await createOpenProgram(resolvedContext).exitOverride().parseAsync(argv, { from: "user" });
+  await parseCommand(createOpenProgram(resolvedContext), argv);
 }
 
 function createOpenProgram(context: ReturnType<typeof resolveCommandContext>): Command {
