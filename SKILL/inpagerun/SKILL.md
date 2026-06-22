@@ -35,6 +35,8 @@ Persistent session workflow:
 id=$(inpagerun open <url>)
 inpagerun --id "$id" --code "<browser JavaScript>"
 inpagerun close --id "$id"
+# Or close every persistent session:
+inpagerun closeall
 ```
 
 Persistent session with an unpacked Chromium extension:
@@ -61,6 +63,7 @@ Options:
 - `--id <id>`: persistent session id returned by `inpagerun open`
 - `--code <code>`: JavaScript to run inside the persistent session page
 - `--debug`: forwards `console.debug(...)` to stdout with a `[DEBUG]` prefix for code runs
+- `closeall`: close every tracked persistent session
 
 Extensions are supported only with `inpagerun open`, not with `inpagerun once`.
 
@@ -128,6 +131,7 @@ id=$(inpagerun open https://example.com)
 inpagerun --id "$id" --code "document.body.dataset.status = 'ready'"
 inpagerun --id "$id" --code "console.log(document.body.dataset.status)"
 inpagerun close --id "$id"
+# Or: inpagerun closeall
 ```
 
 Use debug output:

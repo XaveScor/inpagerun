@@ -48,6 +48,12 @@ Close a persistent session:
 inpagerun close --id <id>
 ```
 
+Close all persistent sessions:
+
+```bash
+inpagerun closeall
+```
+
 ## Agents and LLMs
 
 If you are an agent or LLM, use the [inpagerun skill](https://github.com/XaveScor/inpagerun/blob/master/SKILL/inpagerun/SKILL.md) for guidance on running this CLI.
@@ -83,6 +89,12 @@ Close the page:
 
 ```bash
 inpagerun close --id "$id"
+```
+
+Close every open persistent session:
+
+```bash
+inpagerun closeall
 ```
 
 `open` starts a detached Chromium instance in headless mode by default. Use `--headed` to make the browser window visible:
@@ -167,3 +179,4 @@ inpagerun close --id "$id"
 - Each `inpagerun open` starts its own detached Chromium instance and browser profile.
 - Session ids remain valid while their detached Chromium instance and page are open.
 - `inpagerun close --id <id>` closes that session and cleans up its Chromium profile.
+- `inpagerun closeall` closes every tracked persistent session and cleans up their Chromium profiles.

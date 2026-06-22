@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { getCliHelp, runCli } from "../src/cli";
 import { runCloseCommand } from "../src/commands/close";
+import { runCloseAllCommand } from "../src/commands/closeall";
 import { runOnceCommand } from "../src/commands/once";
 import { runOpenCommand } from "../src/commands/open";
 import { runPersistentRunCommand } from "../src/commands/run";
@@ -23,6 +24,7 @@ describe("CLI commands", () => {
     [["once", "--help"], "Usage: inpagerun once -u <url> -c <code>"],
     [["open", "--help"], "Usage: inpagerun open [--headed] [--debug] [--extension <path>] <url>"],
     [["close", "--help"], "Usage: inpagerun close --id <id>"],
+    [["closeall", "--help"], "Usage: inpagerun closeall"],
     [["--id", "session_000000", "--help"], "Usage: inpagerun --id <id> --code <code>"],
   ] as const)("prints help for %s without throwing", async (argv, expectedText) => {
     const stdout = createMemoryWritable();
@@ -287,6 +289,72 @@ describe("CLI commands", () => {
         }).catch(() => {});
       }
 
+      await server.close();
+      await tmpdir.close();
+    }
+  });
+
+  it("writes a message when closing all sessions with no open sessions", async () => {
+    const tmpdir = await createTestTmpdir();
+    const stdout = createMemoryWritable();
+    const stderr = createMemoryWritable();
+
+    try {
+      await runCloseAllCommand([], {
+        stderr: stderr.stream,
+        stdout: stdout.stream,
+        tmpdir: tmpdir.path,
+      });
+
+      expect(stdout.output()).toBe("no sessions to close\n");
+      expect(stderr.output()).toBe("");
+    } finally {
+      await tmpdir.close();
+    }
+  });
+
+  it("closes all persistent sessions", async () => {
+    const caseDir = getCaseDir("console-log");
+    const server = await startDevServer({ root: caseDir });
+    const tmpdir = await createTestTmpdir();
+    const stderr = createMemoryWritable();
+
+    try {
+      const firstStdout = createMemoryWritable();
+      await runOpenCommand([server.url], {
+        cwd: caseDir,
+        stderr: stderr.stream,
+        stdout: firstStdout.stream,
+        tmpdir: tmpdir.path,
+      });
+      const firstId = firstStdout.output().trim();
+
+      const secondStdout = createMemoryWritable();
+      await runOpenCommand([server.url], {
+        cwd: caseDir,
+        stderr: stderr.stream,
+        stdout: secondStdout.stream,
+        tmpdir: tmpdir.path,
+      });
+      const secondId = secondStdout.output().trim();
+
+      expect(Object.keys((await readState(tmpdir.path))?.sessions ?? {})).toEqual([
+        firstId,
+        secondId,
+      ]);
+
+      const closeStdout = createMemoryWritable();
+      await runCloseAllCommand([], {
+        cwd: caseDir,
+        stderr: stderr.stream,
+        stdout: closeStdout.stream,
+        tmpdir: tmpdir.path,
+      });
+
+      expect(closeStdout.output()).toBe(`${server.url} has closed\n${server.url} has closed\n`);
+      expect(await readState(tmpdir.path)).toBeUndefined();
+      expect(stderr.output()).toBe("");
+    } finally {
       await server.close();
       await tmpdir.close();
     }

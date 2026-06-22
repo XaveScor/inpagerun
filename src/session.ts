@@ -40,6 +40,13 @@ export type CloseSessionResult = {
   url: string;
 };
 
+export type CloseAllSessionsResult = {
+  sessions: Array<{
+    id: string;
+    url: string;
+  }>;
+};
+
 export async function openSession(options: OpenSessionOptions): Promise<OpenSessionResult> {
   return await withStateLock(options.tmpdir, async () => {
     const state = (await readState(options.tmpdir)) ?? { sessions: {} };
@@ -137,6 +144,26 @@ export async function closeSession(
       return { url: sessionState.url };
     });
   });
+}
+
+export async function closeAllSessions(
+  options: { tmpdir?: string } = {},
+): Promise<CloseAllSessionsResult> {
+  const sessions = await withStateLock(options.tmpdir, async () => {
+    const state = await readState(options.tmpdir);
+
+    return Object.entries(state?.sessions ?? {})
+      .map(([id, session]) => ({ createdAt: session.createdAt, id }))
+      .sort((left, right) => left.createdAt - right.createdAt || left.id.localeCompare(right.id));
+  });
+  const closedSessions: CloseAllSessionsResult["sessions"] = [];
+
+  for (const session of sessions) {
+    const result = await closeSession(session.id, { tmpdir: options.tmpdir });
+    closedSessions.push({ id: session.id, url: result.url });
+  }
+
+  return { sessions: closedSessions };
 }
 
 function normalizeExtensions(extensions: ExtensionOptions[]): ExtensionState[] {

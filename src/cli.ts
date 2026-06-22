@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import { writeLine } from "./console-output";
 import { runCloseCommand } from "./commands/close";
+import { runCloseAllCommand } from "./commands/closeall";
 import { runOnceCommand } from "./commands/once";
 import { runOpenCommand } from "./commands/open";
 import { runPersistentRunCommand } from "./commands/run";
@@ -22,6 +23,9 @@ export async function runCli(argv: string[], context?: CommandContext): Promise<
       return;
     case "close":
       await runCloseCommand(rest, resolvedContext);
+      return;
+    case "closeall":
+      await runCloseAllCommand(rest, resolvedContext);
       return;
     case "--help":
     case "-h":
@@ -78,6 +82,7 @@ Commands:
   inpagerun open [--headed] [--debug] [--extension <path>] <url>
   inpagerun --id <id> --code <code> [--debug]
   inpagerun close --id <id>
+  inpagerun closeall
 
 ${AGENT_SKILL_HELP}`,
     );
