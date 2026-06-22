@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { access, mkdir, mkdtemp, rm } from "node:fs/promises";
+import { access, mkdir, mkdtemp, rm, stat } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { createServer } from "node:net";
 import { join } from "node:path";
@@ -9,85 +9,44 @@ import { chromium, type Browser } from "playwright";
 import {
   getInpagerunTmpDir,
   isProcessAlive,
-  readState,
-  removeState,
   type BrowserState,
-  type InpagerunState,
-  writeState,
+  type ExtensionState,
 } from "./state";
 
 const require = createRequire(import.meta.url);
 const playwrightPackage = require("playwright/package.json") as { version: string };
 
-export type EnsureBrowserOptions = {
+export type StartDetachedBrowserOptions = {
   debug?(message: string): Promise<void> | void;
+  extensions?: ExtensionState[];
   headed: boolean;
   tmpdir?: string;
 };
-
-export async function ensureDetachedBrowser(
-  options: EnsureBrowserOptions,
-): Promise<InpagerunState> {
-  const existingState = await readState(options.tmpdir);
-
-  if (existingState && (await isBrowserStateUsable(existingState.browser))) {
-    await options.debug?.(
-      `Using existing ${existingState.browser.headed ? "headed" : "headless"} Chromium at port ${existingState.browser.port}`,
-    );
-    return existingState;
-  }
-
-  if (existingState) {
-    await options.debug?.("Removing stale Chromium state");
-    await cleanupBrowserFiles(existingState.browser, options.tmpdir);
-    await removeState(options.tmpdir);
-  }
-
-  const browser = await startDetachedBrowser(options);
-  const state: InpagerunState = { browser, pages: {} };
-  await writeState(state, options.tmpdir);
-
-  return state;
-}
-
-export async function requireDetachedBrowser(tmpdir?: string): Promise<InpagerunState> {
-  const state = await readState(tmpdir);
-
-  if (!state) {
-    throw new Error("Browser is not running; page id is no longer valid.");
-  }
-
-  if (!(await isBrowserStateUsable(state.browser))) {
-    await cleanupBrowserFiles(state.browser, tmpdir);
-    await removeState(tmpdir);
-    throw new Error("Browser is not running; page id is no longer valid.");
-  }
-
-  return state;
-}
 
 export async function connectDetachedBrowser(browser: BrowserState): Promise<Browser> {
   return await chromium.connectOverCDP(browser.wsEndpoint);
 }
 
-export async function closeDetachedBrowser(state: InpagerunState, tmpdir?: string): Promise<void> {
+export async function closeDetachedBrowser(browserState: BrowserState): Promise<void> {
   try {
-    const browser = await connectDetachedBrowser(state.browser);
+    const browser = await connectDetachedBrowser(browserState);
     const session = await browser.newBrowserCDPSession();
     await session.send("Browser.close");
     await browser.close().catch(() => {});
   } catch {}
 
-  await waitForProcessExit(state.browser.pid);
-  await cleanupBrowserFiles(state.browser, tmpdir);
-  await removeState(tmpdir);
+  await waitForProcessExit(browserState.pid);
+  await cleanupBrowserFiles(browserState);
 }
 
-async function startDetachedBrowser(options: EnsureBrowserOptions): Promise<BrowserState> {
+export async function startDetachedBrowser(
+  options: StartDetachedBrowserOptions,
+): Promise<BrowserState> {
   const port = await getFreePort();
   const rootDir = getInpagerunTmpDir(options.tmpdir);
   const executablePath = await getChromiumExecutablePath();
   await mkdir(rootDir, { recursive: true });
+  await validateExtensionDirectories(options.extensions ?? []);
 
   const userDataDir = await mkdtemp(join(rootDir, "profile-"));
   const args = [
@@ -98,6 +57,13 @@ async function startDetachedBrowser(options: EnsureBrowserOptions): Promise<Brow
     "--password-store=basic",
     "--use-mock-keychain",
   ];
+  const extensionPaths = options.extensions?.map((extension) => extension.path) ?? [];
+
+  if (extensionPaths.length > 0) {
+    const joined = extensionPaths.join(",");
+    args.push(`--disable-extensions-except=${joined}`);
+    args.push(`--load-extension=${joined}`);
+  }
 
   if (!options.headed) {
     args.push("--headless=new");
@@ -124,6 +90,22 @@ async function startDetachedBrowser(options: EnsureBrowserOptions): Promise<Brow
   };
 }
 
+async function validateExtensionDirectories(extensions: ExtensionState[]): Promise<void> {
+  for (const extension of extensions) {
+    let stats;
+
+    try {
+      stats = await stat(extension.path);
+    } catch {
+      throw new Error(`Extension path does not exist: ${extension.path}`);
+    }
+
+    if (!stats.isDirectory()) {
+      throw new Error(`Extension path must be a directory: ${extension.path}`);
+    }
+  }
+}
+
 async function getChromiumExecutablePath(): Promise<string> {
   const executablePath = chromium.executablePath();
 
@@ -143,24 +125,6 @@ async function getChromiumExecutablePath(): Promise<string> {
         `  npx playwright@${playwrightPackage.version} install --list`,
       ].join("\n"),
     );
-  }
-}
-
-async function isBrowserStateUsable(browser: BrowserState): Promise<boolean> {
-  if (!isProcessAlive(browser.pid)) {
-    return false;
-  }
-
-  try {
-    const response = await fetch(`http://127.0.0.1:${browser.port}/json/version`);
-    if (!response.ok) {
-      return false;
-    }
-
-    const payload = (await response.json()) as { webSocketDebuggerUrl?: string };
-    return payload.webSocketDebuggerUrl === browser.wsEndpoint;
-  } catch {
-    return false;
   }
 }
 
@@ -208,14 +172,8 @@ async function getFreePort(): Promise<number> {
   });
 }
 
-async function cleanupBrowserFiles(browser: BrowserState, tmpdir?: string): Promise<void> {
+async function cleanupBrowserFiles(browser: BrowserState): Promise<void> {
   await rm(browser.userDataDir, {
-    force: true,
-    maxRetries: 10,
-    recursive: true,
-    retryDelay: 100,
-  });
-  await rm(getInpagerunTmpDir(tmpdir), {
     force: true,
     maxRetries: 10,
     recursive: true,
@@ -237,6 +195,6 @@ async function waitForProcessExit(pid: number): Promise<void> {
   }
 }
 
-export function createPageId(): string {
-  return `page_${randomBytes(3).toString("hex")}`;
+export function createSessionId(): string {
+  return `session_${randomBytes(3).toString("hex")}`;
 }

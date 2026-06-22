@@ -1,10 +1,12 @@
 import { randomUUID } from "node:crypto";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { getCliHelp, runCli } from "../src/cli";
 import { runCloseCommand } from "../src/commands/close";
 import { runOnceCommand } from "../src/commands/once";
 import { runOpenCommand } from "../src/commands/open";
 import { runPersistentRunCommand } from "../src/commands/run";
+import { readState } from "../src/state";
 import { getCaseDir, readCaseCode, type TestCaseName } from "./helpers/cases";
 import { startDevServer } from "./helpers/dev-server";
 import { createMemoryWritable } from "./helpers/streams";
@@ -19,9 +21,9 @@ describe("CLI commands", () => {
 
   it.each([
     [["once", "--help"], "Usage: inpagerun once -u <url> -c <code>"],
-    [["open", "--help"], "Usage: inpagerun open [--headed] [--debug] <url>"],
+    [["open", "--help"], "Usage: inpagerun open [--headed] [--debug] [--extension <path>] <url>"],
     [["close", "--help"], "Usage: inpagerun close --id <id>"],
-    [["--id", "page_000000", "--help"], "Usage: inpagerun --id <id> --code <code>"],
+    [["--id", "session_000000", "--help"], "Usage: inpagerun --id <id> --code <code>"],
   ] as const)("prints help for %s without throwing", async (argv, expectedText) => {
     const stdout = createMemoryWritable();
     const stderr = createMemoryWritable();
@@ -85,7 +87,7 @@ describe("CLI commands", () => {
       });
 
       const id = stdout.output().trim();
-      expect(id).toMatch(/^page_[a-f0-9]{6}$/);
+      expect(id).toMatch(/^session_[a-f0-9]{6}$/);
 
       await runPersistentRunCommand(
         ["--id", id, "--code", "(globalThis as any).__inpagerunValue = 41;"],
@@ -220,6 +222,125 @@ describe("CLI commands", () => {
       await server.close();
       await tmpdir.close();
     }
+  });
+
+  it("opens each persistent session in its own Chromium browser", async () => {
+    const caseDir = getCaseDir("console-log");
+    const server = await startDevServer({ root: caseDir });
+    const tmpdir = await createTestTmpdir();
+    const stderr = createMemoryWritable();
+    let firstId: string | undefined;
+    let secondId: string | undefined;
+
+    try {
+      const firstStdout = createMemoryWritable();
+      await runOpenCommand([server.url], {
+        cwd: caseDir,
+        stderr: stderr.stream,
+        stdout: firstStdout.stream,
+        tmpdir: tmpdir.path,
+      });
+      firstId = firstStdout.output().trim();
+
+      const secondStdout = createMemoryWritable();
+      await runOpenCommand([server.url], {
+        cwd: caseDir,
+        stderr: stderr.stream,
+        stdout: secondStdout.stream,
+        tmpdir: tmpdir.path,
+      });
+      secondId = secondStdout.output().trim();
+
+      const state = await readState(tmpdir.path);
+      const firstBrowser = state?.sessions[firstId]?.browser;
+      const secondBrowser = state?.sessions[secondId]?.browser;
+
+      expect(firstBrowser?.pid).not.toBe(secondBrowser?.pid);
+      expect(firstBrowser?.port).not.toBe(secondBrowser?.port);
+      expect(firstBrowser?.userDataDir).not.toBe(secondBrowser?.userDataDir);
+
+      const closeStdout = createMemoryWritable();
+      await runCloseCommand(["--id", firstId], {
+        cwd: caseDir,
+        stderr: stderr.stream,
+        stdout: closeStdout.stream,
+        tmpdir: tmpdir.path,
+      });
+
+      const runStdout = createMemoryWritable();
+      await runPersistentRunCommand(["--id", secondId, "--code", "console.log('still-open');"], {
+        cwd: caseDir,
+        stderr: stderr.stream,
+        stdout: runStdout.stream,
+        tmpdir: tmpdir.path,
+      });
+
+      expect(runStdout.output()).toBe("still-open\n");
+      expect(stderr.output()).toBe("");
+    } finally {
+      if (secondId) {
+        await runCloseCommand(["--id", secondId], {
+          cwd: caseDir,
+          stderr: stderr.stream,
+          stdout: createMemoryWritable().stream,
+          tmpdir: tmpdir.path,
+        }).catch(() => {});
+      }
+
+      await server.close();
+      await tmpdir.close();
+    }
+  });
+
+  it("stores normalized extension paths for persistent sessions", async () => {
+    const caseDir = getCaseDir("chromium-extension");
+    const server = await startDevServer({ root: caseDir });
+    const tmpdir = await createTestTmpdir();
+    const stdout = createMemoryWritable();
+    const stderr = createMemoryWritable();
+    let id: string | undefined;
+
+    try {
+      await runOpenCommand(["--extension", "./extension", server.url], {
+        cwd: caseDir,
+        stderr: stderr.stream,
+        stdout: stdout.stream,
+        tmpdir: tmpdir.path,
+      });
+
+      id = stdout.output().trim();
+      const state = await readState(tmpdir.path);
+
+      expect(state?.sessions[id]?.extensions).toEqual([{ path: join(caseDir, "extension") }]);
+      expect(stderr.output()).toBe("");
+    } finally {
+      if (id) {
+        await runCloseCommand(["--id", id], {
+          cwd: caseDir,
+          stderr: stderr.stream,
+          stdout: createMemoryWritable().stream,
+          tmpdir: tmpdir.path,
+        }).catch(() => {});
+      }
+
+      await server.close();
+      await tmpdir.close();
+    }
+  });
+
+  it("does not accept extensions in once mode", async () => {
+    const stdout = createMemoryWritable();
+    const stderr = createMemoryWritable();
+
+    await expect(
+      runOnceCommand(
+        ["--extension", "./extension", "-u", "https://example.com", "-c", "console.log(1)"],
+        {
+          stderr: stderr.stream,
+          stdout: stdout.stream,
+        },
+      ),
+    ).rejects.toThrow();
   });
 });
 

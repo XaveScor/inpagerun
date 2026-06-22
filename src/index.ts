@@ -4,14 +4,11 @@ export { runCode } from "./run-code";
 export type { RunCodeOptions } from "./run-code";
 export { runFile } from "./run-file";
 export type { RunFileConsoleMessage, RunFileInPageOptions, RunFileOptions } from "./run-file";
-export {
-  closePersistentPage,
-  openPersistentPage,
-  runCodeInPersistentPage,
-} from "./persistent-page";
+export { closeSession, openSession, runCodeInSession } from "./session";
 export type {
-  ClosePersistentPageResult,
-  OpenPersistentPageOptions,
-  OpenPersistentPageResult,
-  RunPersistentPageOptions,
-} from "./persistent-page";
+  CloseSessionResult,
+  ExtensionOptions,
+  OpenSessionOptions,
+  OpenSessionResult,
+  RunSessionOptions,
+} from "./session";

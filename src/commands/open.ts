@@ -1,10 +1,12 @@
 import { Command } from "commander";
+import { resolve } from "node:path";
 import { writeLine } from "../console-output";
-import { openPersistentPage } from "../persistent-page";
+import { openSession } from "../session";
 import { parseCommand, resolveCommandContext, type CommandContext } from "./types";
 
 type OpenOptions = {
   debug?: boolean;
+  extension: string[];
   headed?: boolean;
 };
 
@@ -25,17 +27,21 @@ function createOpenProgram(context: ReturnType<typeof resolveCommandContext>): C
         context.stdout.write(text);
       },
     })
-    .usage("[--headed] [--debug] <url>")
+    .usage("[--headed] [--debug] [--extension <path>] <url>")
     .argument("<url>", "Page URL")
     .option("--headed", "Open a visible Chromium window")
     .option("--debug", "Print diagnostic output to stderr")
+    .option("--extension <path>", "Load an unpacked Chromium extension", collect, [])
     .action(async (url: string, options: OpenOptions) => {
-      const result = await openPersistentPage({
+      const result = await openSession({
         debug(message) {
           if (options.debug) {
             return writeLine(context.stderr, `[DEBUG] ${message}`);
           }
         },
+        extensions: options.extension.map((path) => ({
+          path: resolve(context.cwd ?? process.cwd(), path),
+        })),
         headed: options.headed === true,
         tmpdir: context.tmpdir,
         url,
@@ -43,4 +49,9 @@ function createOpenProgram(context: ReturnType<typeof resolveCommandContext>): C
 
       await writeLine(context.stdout, result.id);
     });
+}
+
+function collect(value: string, values: string[]): string[] {
+  values.push(value);
+  return values;
 }

@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { writeLine } from "../console-output";
-import { closePersistentPage } from "../persistent-page";
+import { closeSession } from "../session";
 import { parseCommand, resolveCommandContext, type CommandContext } from "./types";
 
 type CloseOptions = {
@@ -25,9 +25,9 @@ function createCloseProgram(context: ReturnType<typeof resolveCommandContext>): 
       },
     })
     .usage("--id <id>")
-    .requiredOption("--id <id>", "Page id returned by inpagerun open")
+    .requiredOption("--id <id>", "Session id returned by inpagerun open")
     .action(async (options: CloseOptions) => {
-      const result = await closePersistentPage(options.id, { tmpdir: context.tmpdir });
+      const result = await closeSession(options.id, { tmpdir: context.tmpdir });
       await writeLine(context.stdout, `${result.url} has closed`);
     });
 }

@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { writeConsoleMessage } from "../console-output";
-import { runCodeInPersistentPage } from "../persistent-page";
+import { runCodeInSession } from "../session";
 import { parseCommand, resolveCommandContext, type CommandContext } from "./types";
 
 type RunOptions = {
@@ -30,11 +30,11 @@ function createRunProgram(context: ReturnType<typeof resolveCommandContext>): Co
       },
     })
     .usage("--id <id> --code <code>")
-    .requiredOption("--id <id>", "Page id returned by inpagerun open")
+    .requiredOption("--id <id>", "Session id returned by inpagerun open")
     .requiredOption("--code <code>", "JavaScript code to run in the page")
     .option("--debug", "Forward browser console.debug output to stdout")
     .action(async (options: RunOptions) => {
-      await runCodeInPersistentPage({
+      await runCodeInSession({
         code: options.code,
         cwd: context.cwd,
         id: options.id,

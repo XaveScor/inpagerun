@@ -3,7 +3,6 @@ import { normalizePageUrl } from "./url";
 
 type TargetInfo = {
   targetId: string;
-  type: string;
 };
 
 export async function openPageTarget(
@@ -33,35 +32,6 @@ export async function findPageByTargetId(
   }
 
   return undefined;
-}
-
-export async function targetExists(browser: Browser, targetId: string): Promise<boolean> {
-  const session = await browser.newBrowserCDPSession();
-
-  try {
-    const result = (await session.send("Target.getTargets")) as { targetInfos: TargetInfo[] };
-    return result.targetInfos.some(
-      (target) => target.targetId === targetId && target.type === "page",
-    );
-  } finally {
-    await session.detach().catch(() => {});
-  }
-}
-
-export async function closePageTarget(browser: Browser, targetId: string): Promise<void> {
-  const session = await browser.newBrowserCDPSession();
-
-  try {
-    const result = (await session.send("Target.closeTarget", { targetId })) as {
-      success?: boolean;
-    };
-
-    if (result.success === false) {
-      throw new Error("Page is no longer open.");
-    }
-  } finally {
-    await session.detach().catch(() => {});
-  }
 }
 
 async function getPageTargetId(page: Page): Promise<string> {

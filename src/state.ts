@@ -10,15 +10,20 @@ export type BrowserState = {
   wsEndpoint: string;
 };
 
-export type PageState = {
+export type ExtensionState = {
+  path: string;
+};
+
+export type SessionState = {
+  browser: BrowserState;
   createdAt: number;
-  targetId: string;
+  extensions: ExtensionState[];
+  pageTargetId: string;
   url: string;
 };
 
 export type InpagerunState = {
-  browser: BrowserState;
-  pages: Record<string, PageState>;
+  sessions: Record<string, SessionState>;
 };
 
 export function getInpagerunTmpDir(tmpdir?: string): string {

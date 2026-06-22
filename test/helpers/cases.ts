@@ -11,7 +11,8 @@ export type TestCaseName =
   | "typescript-nested-type-import"
   | "incorrect-static-import"
   | "incorrect-dynamic-import"
-  | "csp-header";
+  | "csp-header"
+  | "chromium-extension";
 
 export function getCaseDir(name: TestCaseName): string {
   return fileURLToPath(new URL(`../cases/${name}`, import.meta.url));

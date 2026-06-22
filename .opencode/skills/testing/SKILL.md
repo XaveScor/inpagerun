@@ -1,6 +1,6 @@
 ---
 name: testing
-description: Use when writing or modifying inpagerun tests, test fixtures under test/cases, Vitest integration tests, command-file CLI behavior tests, persistent page tests, or runCode coverage.
+description: Use when writing or modifying inpagerun tests, test fixtures under test/cases, Vitest integration tests, command-file CLI behavior tests, persistent session tests, or runCode coverage.
 ---
 
 # Testing

@@ -1,9 +1,5 @@
 import type { RunFileConsoleMessage } from "./run-file";
-import {
-  closePersistentPage,
-  openPersistentPage,
-  runCodeInPersistentPage,
-} from "./persistent-page";
+import { closeSession, openSession, runCodeInSession } from "./session";
 
 export type RunCodeOptions = {
   url: string;
@@ -14,7 +10,7 @@ export type RunCodeOptions = {
 };
 
 export async function runCode(options: RunCodeOptions): Promise<void> {
-  const { id } = await openPersistentPage({
+  const { id } = await openSession({
     headed: false,
     tmpdir: options.tmpdir,
     url: options.url,
@@ -22,7 +18,7 @@ export async function runCode(options: RunCodeOptions): Promise<void> {
   let primaryError: unknown;
 
   try {
-    await runCodeInPersistentPage({
+    await runCodeInSession({
       code: options.code,
       cwd: options.cwd,
       id,
@@ -34,7 +30,7 @@ export async function runCode(options: RunCodeOptions): Promise<void> {
     throw error;
   } finally {
     try {
-      await closePersistentPage(id, { tmpdir: options.tmpdir });
+      await closeSession(id, { tmpdir: options.tmpdir });
     } catch (error) {
       if (!primaryError) {
         throw error;
