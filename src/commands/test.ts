@@ -7,6 +7,7 @@ import { parseCommand, resolveCommandContext, type CommandContext } from "./type
 type TestOptions = {
   debug?: boolean;
   extension: string[];
+  headed?: boolean;
 };
 
 export async function runTestCommand(argv: string[], context?: CommandContext): Promise<void> {
@@ -26,8 +27,9 @@ function createTestProgram(context: ReturnType<typeof resolveCommandContext>): C
         context.stdout.write(text);
       },
     })
-    .usage("[files...] [--debug] [--extension <path>]")
+    .usage("[files...] [--headed] [--debug] [--extension <path>]")
     .argument("[files...]", "Test files or globs")
+    .option("--headed", "Open a visible Chromium window")
     .option("--debug", "Forward browser console.debug output to stdout")
     .option("--extension <path>", "Load an unpacked Chromium extension", collect, [])
     .action(async (files: string[], options: TestOptions) => {
@@ -37,6 +39,7 @@ function createTestProgram(context: ReturnType<typeof resolveCommandContext>): C
           path: resolve(context.cwd ?? process.cwd(), path),
         })),
         files,
+        headed: options.headed === true,
         onConsole(message) {
           return writeConsoleMessage(message, {
             debugEnabled: options.debug === true,

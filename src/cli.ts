@@ -83,7 +83,7 @@ function createProgram(): Command {
       `
 Commands:
   inpagerun once -u <url> -c <code>
-  inpagerun test [files...] [--debug] [--extension <path>]
+  inpagerun test [files...] [--headed] [--debug] [--extension <path>]
   inpagerun open [--headed] [--debug] [--extension <path>] <url>
   inpagerun --id <id> --code <code> [--debug]
   inpagerun close --id <id>

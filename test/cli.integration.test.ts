@@ -23,7 +23,10 @@ describe("CLI commands", () => {
 
   it.each([
     [["once", "--help"], "Usage: inpagerun once -u <url> -c <code>"],
-    [["test", "--help"], "Usage: inpagerun test [files...] [--debug] [--extension <path>]"],
+    [
+      ["test", "--help"],
+      "Usage: inpagerun test [files...] [--headed] [--debug] [--extension <path>]",
+    ],
     [["open", "--help"], "Usage: inpagerun open [--headed] [--debug] [--extension <path>] <url>"],
     [["close", "--help"], "Usage: inpagerun close --id <id>"],
     [["closeall", "--help"], "Usage: inpagerun closeall"],

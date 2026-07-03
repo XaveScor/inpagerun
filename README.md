@@ -92,6 +92,12 @@ Load unpacked Chromium extensions while running tests:
 inpagerun test --extension ./my-extension
 ```
 
+Use `--headed` to make the test browser window visible:
+
+```bash
+inpagerun test --headed
+```
+
 Each test file declares its target page URLs with `createTest(...)`:
 
 ```ts

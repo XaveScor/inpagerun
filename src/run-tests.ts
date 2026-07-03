@@ -38,6 +38,7 @@ export type RunTestFilesOptions = {
   cwd?: string;
   extensions?: ExtensionState[];
   files?: string[];
+  headed?: boolean;
   onConsole?(message: RunFileConsoleMessage): Promise<void> | void;
   tmpdir?: string;
 };
@@ -69,6 +70,7 @@ export async function runTestFiles(options: RunTestFilesOptions = {}): Promise<T
   const files = await resolveTestFiles(cwd, options.files ?? []);
   const executionBrowser = await startExecutionBrowser({
     extensions: options.extensions ?? [],
+    headed: options.headed === true,
     tmpdir: options.tmpdir,
   });
 
@@ -152,10 +154,11 @@ export async function runTestFiles(options: RunTestFilesOptions = {}): Promise<T
 
 async function startExecutionBrowser(options: {
   extensions: ExtensionState[];
+  headed: boolean;
   tmpdir?: string;
 }): Promise<{ close(): Promise<void>; newPage(): Promise<import("playwright").Page> }> {
   if (options.extensions.length === 0) {
-    const browser = await chromium.launch();
+    const browser = await chromium.launch({ headless: !options.headed });
 
     return {
       async close() {
@@ -169,7 +172,7 @@ async function startExecutionBrowser(options: {
 
   const browserState = await startDetachedBrowser({
     extensions: options.extensions,
-    headed: false,
+    headed: options.headed,
     tmpdir: options.tmpdir,
   });
   const browser = await connectDetachedBrowser(browserState);
