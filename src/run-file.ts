@@ -33,9 +33,10 @@ type RunFileError = {
   stack?: string;
 };
 
-type RunFileResult =
+type RunFileResult<TValue = unknown> =
   | {
       ok: true;
+      value?: TValue;
     }
   | {
       ok: false;
@@ -64,10 +65,10 @@ export async function runFile(options: RunFileOptions): Promise<void> {
   });
 }
 
-export async function runFileInPage(options: RunFileInPageOptions): Promise<void> {
+export async function runFileInPage<TValue = void>(options: RunFileInPageOptions): Promise<TValue> {
   const callbackNames = options.callbackNames ?? createRunFileCallbackNames();
 
-  const result = await new Promise<RunFileResult>(async (resolve, reject) => {
+  const result = await new Promise<RunFileResult<TValue>>(async (resolve, reject) => {
     let settled = false;
 
     const finish = (callback: () => void) => {
@@ -82,7 +83,7 @@ export async function runFileInPage(options: RunFileInPageOptions): Promise<void
     try {
       await options.page.exposeFunction(
         callbackNames.doneFunctionName,
-        async (payload: RunFileResult) => {
+        async (payload: RunFileResult<TValue>) => {
           finish(() => resolve(payload));
         },
       );
@@ -103,6 +104,8 @@ export async function runFileInPage(options: RunFileInPageOptions): Promise<void
   if (!result.ok) {
     throw createRunFileError(result.error);
   }
+
+  return result.value as TValue;
 }
 
 export function createRunFileCallbackNames(): RunFileCallbackNames {

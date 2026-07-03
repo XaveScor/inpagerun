@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { getCliHelp, runCli } from "../src/cli";
@@ -22,6 +23,7 @@ describe("CLI commands", () => {
 
   it.each([
     [["once", "--help"], "Usage: inpagerun once -u <url> -c <code>"],
+    [["test", "--help"], "Usage: inpagerun test [files...] [--debug]"],
     [["open", "--help"], "Usage: inpagerun open [--headed] [--debug] [--extension <path>] <url>"],
     [["close", "--help"], "Usage: inpagerun close --id <id>"],
     [["closeall", "--help"], "Usage: inpagerun closeall"],
@@ -70,6 +72,63 @@ describe("CLI commands", () => {
     });
 
     expect(output.stdout).toBe("csp-header-ok\n");
+    expect(output.stderr).toBe("");
+  });
+
+  it("runs inpagerun test files with chai assertions", async () => {
+    const output = await runTestCase(`
+import { createTest } from "inpagerun/test";
+
+const test = createTest("__URL__");
+
+test("reads title", () => {
+  expect(document.title).to.equal("InpPageRun Test Page");
+});
+
+test("supports async tests", async () => {
+  const text = await Promise.resolve(document.querySelector("button")?.textContent);
+  expect(text).to.equal("Submit");
+});
+`);
+
+    expect(output.stdout).toContain("sample.inpagerun.test.ts\n");
+    expect(output.stdout).toContain("    ✓ reads title\n");
+    expect(output.stdout).toContain("    ✓ supports async tests\n");
+    expect(output.stdout).toContain("0 failed, 2 passed\n");
+    expect(output.stderr).toBe("");
+  });
+
+  it("reports failing inpagerun test files after running all tests", async () => {
+    const output = await runFailingTestCase(`
+import { createTest } from "inpagerun/test";
+
+const test = createTest("__URL__");
+
+test("fails title", () => {
+  expect(document.title).to.equal("Wrong Title");
+});
+
+test("continues after failure", () => {
+  expect(document.querySelector("h1")?.textContent).to.equal("InpPageRun Test Page");
+});
+`);
+
+    expect(output.stdout).toContain("    ✕ fails title\n");
+    expect(output.stdout).toContain("    ✓ continues after failure\n");
+    expect(output.stdout).toContain("expected 'InpPageRun Test Page' to equal 'Wrong Title'");
+    expect(output.stdout).toContain("1 failed, 1 passed\n");
+    expect(output.stderr).toBe("");
+  });
+
+  it("reports inpagerun test files without registered tests", async () => {
+    const output = await runFailingTestCase(`
+import { createTest } from "inpagerun/test";
+
+createTest("__URL__");
+`);
+
+    expect(output.stdout).toContain("  ✕ No tests registered. Use createTest(...urls).\n");
+    expect(output.stdout).toContain("1 failed, 0 passed\n");
     expect(output.stderr).toBe("");
   });
 
@@ -430,6 +489,47 @@ async function runCliCase(
       stdout: stdout.stream,
       tmpdir: tmpdir.path,
     });
+  } finally {
+    await server.close();
+    await tmpdir.close();
+  }
+
+  return { stderr: stderr.output(), stdout: stdout.output() };
+}
+
+async function runTestCase(source: string): Promise<{ stdout: string; stderr: string }> {
+  return await runTestCaseInternal(source, false);
+}
+
+async function runFailingTestCase(source: string): Promise<{ stdout: string; stderr: string }> {
+  return await runTestCaseInternal(source, true);
+}
+
+async function runTestCaseInternal(
+  source: string,
+  expectFailure: boolean,
+): Promise<{ stdout: string; stderr: string }> {
+  const pageDir = getCaseDir("test-page");
+  const server = await startDevServer({ root: pageDir });
+  const tmpdir = await createTestTmpdir();
+  const stdout = createMemoryWritable();
+  const stderr = createMemoryWritable();
+
+  try {
+    const file = join(tmpdir.path, "sample.inpagerun.test.ts");
+    await writeFile(file, source.replaceAll("__URL__", server.url), "utf8");
+    const run = runCli(["test"], {
+      cwd: tmpdir.path,
+      stderr: stderr.stream,
+      stdout: stdout.stream,
+      tmpdir: tmpdir.path,
+    });
+
+    if (expectFailure) {
+      await expect(run).rejects.toThrow("Test run failed");
+    } else {
+      await run;
+    }
   } finally {
     await server.close();
     await tmpdir.close();

@@ -10,7 +10,10 @@
     "inpagerun": "./src/bin.ts"
   },
   "type": "module",
-  "exports": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./test": "./src/test.ts"
+  },
   "scripts": {
     "build": "smartbundle",
     "fmt": "oxfmt .",
@@ -20,11 +23,13 @@
     "prepare": "simple-git-hooks"
   },
   "dependencies": {
+    "chai": "^6.2.2",
     "commander": "^15.0.0",
     "playwright": "1.61.0",
     "vite": "^8.1.0"
   },
   "devDependencies": {
+    "@types/chai": "^5.2.3",
     "@types/node": "^26.0.1",
     "oxfmt": "^0.56.0",
     "simple-git-hooks": "^2.13.1",

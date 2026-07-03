@@ -12,7 +12,8 @@ export type TestCaseName =
   | "incorrect-static-import"
   | "incorrect-dynamic-import"
   | "csp-header"
-  | "chromium-extension";
+  | "chromium-extension"
+  | "test-page";
 
 export function getCaseDir(name: TestCaseName): string {
   return fileURLToPath(new URL(`../cases/${name}`, import.meta.url));

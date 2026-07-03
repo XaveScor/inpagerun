@@ -5,6 +5,7 @@ import { runCloseAllCommand } from "./commands/closeall";
 import { runOnceCommand } from "./commands/once";
 import { runOpenCommand } from "./commands/open";
 import { runPersistentRunCommand } from "./commands/run";
+import { runTestCommand } from "./commands/test";
 import { resolveCommandContext, type CommandContext } from "./commands/types";
 
 const AGENT_SKILL_HELP =
@@ -20,6 +21,9 @@ export async function runCli(argv: string[], context?: CommandContext): Promise<
       return;
     case "open":
       await runOpenCommand(rest, resolvedContext);
+      return;
+    case "test":
+      await runTestCommand(rest, resolvedContext);
       return;
     case "close":
       await runCloseCommand(rest, resolvedContext);
@@ -79,6 +83,7 @@ function createProgram(): Command {
       `
 Commands:
   inpagerun once -u <url> -c <code>
+  inpagerun test [files...] [--debug]
   inpagerun open [--headed] [--debug] [--extension <path>] <url>
   inpagerun --id <id> --code <code> [--debug]
   inpagerun close --id <id>

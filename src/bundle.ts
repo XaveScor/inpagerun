@@ -1,4 +1,5 @@
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { build } from "vite";
@@ -10,6 +11,8 @@ export type BundleOptions = {
   cwd?: string;
   consoleFunctionName?: string;
   doneFunctionName?: string;
+  mode?: "run" | "test-discovery" | "test-execution";
+  testUrl?: string;
 };
 
 export type BundleArtifact = {
@@ -20,6 +23,7 @@ export type BundleArtifact = {
 
 const BUNDLE_FILE_NAME = "bundle.js";
 const USER_MODULE_FILE_NAME = "__inpagerun_user_code__.ts";
+const require = createRequire(import.meta.url);
 
 export async function bundle(options: BundleOptions): Promise<BundleArtifact> {
   const cwd = options.cwd ? resolve(options.cwd) : process.cwd();
@@ -35,6 +39,8 @@ export async function bundle(options: BundleOptions): Promise<BundleArtifact> {
       createEntrySource({
         consoleFunctionName: options.consoleFunctionName ?? "__inpagerunConsole",
         doneFunctionName: options.doneFunctionName ?? "__inpagerunDone",
+        mode: options.mode ?? "run",
+        testUrl: options.testUrl,
       }),
     );
 
@@ -48,6 +54,11 @@ export async function bundle(options: BundleOptions): Promise<BundleArtifact> {
         inpagerunResolvePlugin({ code: options.code, userModuleFile }),
         inpagerunDynamicImportPlugin(),
       ],
+      resolve: {
+        alias: {
+          chai: require.resolve("chai"),
+        },
+      },
       build: {
         dynamicImportVarsOptions: {
           exclude: [/.*/],
@@ -94,6 +105,24 @@ export async function bundle(options: BundleOptions): Promise<BundleArtifact> {
 }
 
 function createEntrySource(options: {
+  consoleFunctionName: string;
+  doneFunctionName: string;
+  mode: "run" | "test-discovery" | "test-execution";
+  testUrl?: string;
+}): string {
+  if (options.mode === "run") {
+    return createRunEntrySource(options);
+  }
+
+  return createTestEntrySource({
+    consoleFunctionName: options.consoleFunctionName,
+    doneFunctionName: options.doneFunctionName,
+    mode: options.mode,
+    testUrl: options.testUrl,
+  });
+}
+
+function createRunEntrySource(options: {
   consoleFunctionName: string;
   doneFunctionName: string;
 }): string {
@@ -172,6 +201,161 @@ void (async () => {
       : { name: "Error", message: String(error), stack: undefined };
 
     await report({ ok: false, error: normalized });
+  }
+})();
+`;
+}
+
+function createTestEntrySource(options: {
+  consoleFunctionName: string;
+  doneFunctionName: string;
+  mode: "test-discovery" | "test-execution";
+  testUrl?: string;
+}): string {
+  return `
+import { expect as chaiExpect } from "chai";
+
+const doneFunctionName = ${JSON.stringify(options.doneFunctionName)};
+const consoleFunctionName = ${JSON.stringify(options.consoleFunctionName)};
+const testMode = ${JSON.stringify(options.mode)};
+const executionUrl = ${JSON.stringify(options.testUrl)};
+
+async function runModule() {
+  await import("${USER_MODULE_ID}");
+}
+
+async function report(payload) {
+  await window[doneFunctionName](payload);
+}
+
+function formatValue(value) {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (value instanceof Error) {
+    return value.stack ?? value.name + ": " + value.message;
+  }
+
+  try {
+    const serialized = JSON.stringify(value, null, 2);
+
+    if (serialized !== undefined) {
+      return serialized;
+    }
+  } catch {
+  }
+
+  return String(value);
+}
+
+function normalizeError(error) {
+  return error instanceof Error
+    ? { name: error.name, message: error.message, stack: error.stack }
+    : { name: "Error", message: String(error), stack: undefined };
+}
+
+async function forwardConsole(type, args) {
+  const text = args.map((value) => formatValue(value)).join(" ");
+  await window[consoleFunctionName]({ type, text });
+}
+
+async function withForwardedConsole(run) {
+  const originalConsole = globalThis.console;
+  const forwardedConsole = Object.create(originalConsole);
+  const pending = new Set();
+
+  for (const type of ["debug", "error", "info", "log", "warn"]) {
+    forwardedConsole[type] = (...args) => {
+      const task = forwardConsole(type, args);
+      pending.add(task);
+      void task.finally(() => {
+        pending.delete(task);
+      });
+    };
+  }
+
+  globalThis.console = forwardedConsole;
+
+  try {
+    const value = await run();
+    await Promise.all(pending);
+    return value;
+  } finally {
+    globalThis.console = originalConsole;
+  }
+}
+
+function createRuntime() {
+  const suites = [];
+
+  globalThis.expect = chaiExpect;
+  globalThis.__inpagerunCreateTest = (...urls) => {
+    if (urls.length === 0) {
+      throw new Error("createTest requires at least one URL.");
+    }
+
+    const normalizedUrls = urls.map((url) => String(url));
+    const suite = { urls: normalizedUrls, tests: [] };
+    suites.push(suite);
+
+    return (name, fn) => {
+      suite.tests.push({ name: String(name), fn });
+    };
+  };
+
+  return suites;
+}
+
+function discoverTests(suites) {
+  return {
+    suites: suites.map((suite, suiteIndex) => ({
+      suiteIndex,
+      urls: suite.urls,
+      tests: suite.tests.map((test, testIndex) => ({ name: test.name, testIndex })),
+    })),
+  };
+}
+
+async function executeTests(suites) {
+  const tests = [];
+
+  for (const [suiteIndex, suite] of suites.entries()) {
+    if (!suite.urls.includes(executionUrl)) {
+      continue;
+    }
+
+    for (const [testIndex, test] of suite.tests.entries()) {
+      try {
+        await test.fn();
+        tests.push({ name: test.name, status: "passed", suiteIndex, testIndex });
+      } catch (error) {
+        tests.push({
+          name: test.name,
+          status: "failed",
+          suiteIndex,
+          testIndex,
+          error: normalizeError(error),
+        });
+      }
+    }
+  }
+
+  return { tests, url: executionUrl };
+}
+
+void (async () => {
+  try {
+    const value = await withForwardedConsole(async () => {
+      const suites = createRuntime();
+      await runModule();
+
+      return testMode === "test-discovery" ? discoverTests(suites) : await executeTests(suites);
+    });
+
+    await report({ ok: true, value });
+  } catch (error) {
+    await report({ ok: false, error: normalizeError(error) });
   }
 })();
 `;

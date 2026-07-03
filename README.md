@@ -30,6 +30,12 @@ Run once and close the browser:
 inpagerun once -u <url> -c <code>
 ```
 
+Run browser tests:
+
+```bash
+inpagerun test
+```
+
 Open a persistent session:
 
 ```bash
@@ -69,6 +75,31 @@ Options:
 - `-u, --url <url>`: page URL to open
 - `-c, --code <code>`: JavaScript to run inside the page
 - `--debug`: forward browser `console.debug(...)` output to stdout with a `[DEBUG]` prefix
+
+## Browser Tests
+
+`inpagerun test` runs files matching `**/*.inpagerun.test.ts` and
+`**/*.inpagerun.test.tsx` by default. Pass file paths or globs to limit the run:
+
+```bash
+inpagerun test ./home.inpagerun.test.ts
+inpagerun test "./tests/**/*.inpagerun.test.ts"
+```
+
+Each test file declares its target page URLs with `createTest(...)`:
+
+```ts
+import { createTest } from "inpagerun/test";
+
+const test = createTest("https://example.com");
+
+test("page title", () => {
+  expect(document.title).to.equal("Example Domain");
+});
+```
+
+Assertions use Chai's `expect` API and run inside the browser page. `expect` is
+available globally in test files.
 
 ## Persistent Sessions
 
