@@ -23,7 +23,7 @@ describe("CLI commands", () => {
 
   it.each([
     [["once", "--help"], "Usage: inpagerun once -u <url> -c <code>"],
-    [["test", "--help"], "Usage: inpagerun test [files...] [--debug]"],
+    [["test", "--help"], "Usage: inpagerun test [files...] [--debug] [--extension <path>]"],
     [["open", "--help"], "Usage: inpagerun open [--headed] [--debug] [--extension <path>] <url>"],
     [["close", "--help"], "Usage: inpagerun close --id <id>"],
     [["closeall", "--help"], "Usage: inpagerun closeall"],
@@ -130,6 +130,53 @@ createTest("__URL__");
     expect(output.stdout).toContain("  ✕ No tests registered. Use createTest(...urls).\n");
     expect(output.stdout).toContain("1 failed, 0 passed\n");
     expect(output.stderr).toBe("");
+  });
+
+  it("loads Chromium extensions in test mode", async () => {
+    const pageDir = getCaseDir("chromium-extension");
+    const server = await startDevServer({ root: pageDir });
+    const tmpdir = await createTestTmpdir();
+    const stdout = createMemoryWritable();
+    const stderr = createMemoryWritable();
+
+    try {
+      const file = join(tmpdir.path, "extension.inpagerun.test.ts");
+      await writeFile(
+        file,
+        `
+import { createTest } from "inpagerun/test";
+
+const test = createTest("${server.url}");
+
+test("extension content script runs", async () => {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    if (document.body.dataset.inpagerunExtension === "loaded") {
+      break;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+
+  expect(document.body.dataset.inpagerunExtension).to.equal("loaded");
+});
+`,
+        "utf8",
+      );
+
+      await runCli(["test", "--extension", join(pageDir, "extension")], {
+        cwd: tmpdir.path,
+        stderr: stderr.stream,
+        stdout: stdout.stream,
+        tmpdir: tmpdir.path,
+      });
+
+      expect(stdout.output()).toContain("    ✓ extension content script runs\n");
+      expect(stdout.output()).toContain("0 failed, 1 passed\n");
+      expect(stderr.output()).toBe("");
+    } finally {
+      await server.close();
+      await tmpdir.close();
+    }
   });
 
   it("keeps page state between persistent runs", async () => {

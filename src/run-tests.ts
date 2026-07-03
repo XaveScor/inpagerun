@@ -1,8 +1,10 @@
 import { readdir, readFile } from "node:fs/promises";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { chromium } from "playwright";
+import { closeDetachedBrowser, connectDetachedBrowser, startDetachedBrowser } from "./browser-host";
 import { bundle } from "./bundle";
 import { createRunFileCallbackNames, runFileInPage, type RunFileConsoleMessage } from "./run-file";
+import type { ExtensionState } from "./state";
 import { normalizePageUrl } from "./url";
 
 export type TestRunError = {
@@ -34,8 +36,10 @@ export type TestRunResult = {
 
 export type RunTestFilesOptions = {
   cwd?: string;
+  extensions?: ExtensionState[];
   files?: string[];
   onConsole?(message: RunFileConsoleMessage): Promise<void> | void;
+  tmpdir?: string;
 };
 
 type DiscoveryResult = {
@@ -63,11 +67,14 @@ const IGNORED_DIRS = new Set([".git", "node_modules", "dist", "build", "coverage
 export async function runTestFiles(options: RunTestFilesOptions = {}): Promise<TestRunResult> {
   const cwd = resolve(options.cwd ?? process.cwd());
   const files = await resolveTestFiles(cwd, options.files ?? []);
-  const browser = await chromium.launch();
+  const executionBrowser = await startExecutionBrowser({
+    extensions: options.extensions ?? [],
+    tmpdir: options.tmpdir,
+  });
 
   await using browserHandle = {
     async [Symbol.asyncDispose]() {
-      await browser.close();
+      await executionBrowser.close();
     },
   };
 
@@ -98,7 +105,7 @@ export async function runTestFiles(options: RunTestFilesOptions = {}): Promise<T
       const urlResults: TestUrlResult[] = [];
 
       for (const url of urls) {
-        const page = await browser.newPage({ bypassCSP: true });
+        const page = await executionBrowser.newPage();
 
         try {
           await page.goto(normalizePageUrl(url), { waitUntil: "load" });
@@ -141,6 +148,47 @@ export async function runTestFiles(options: RunTestFilesOptions = {}): Promise<T
   }
 
   return { files: results };
+}
+
+async function startExecutionBrowser(options: {
+  extensions: ExtensionState[];
+  tmpdir?: string;
+}): Promise<{ close(): Promise<void>; newPage(): Promise<import("playwright").Page> }> {
+  if (options.extensions.length === 0) {
+    const browser = await chromium.launch();
+
+    return {
+      async close() {
+        await browser.close();
+      },
+      async newPage() {
+        return await browser.newPage({ bypassCSP: true });
+      },
+    };
+  }
+
+  const browserState = await startDetachedBrowser({
+    extensions: options.extensions,
+    headed: false,
+    tmpdir: options.tmpdir,
+  });
+  const browser = await connectDetachedBrowser(browserState);
+
+  return {
+    async close() {
+      await browser.close().catch(() => {});
+      await closeDetachedBrowser(browserState);
+    },
+    async newPage() {
+      const context = browser.contexts()[0];
+
+      if (!context) {
+        throw new Error("Chromium extension browser did not expose a default context.");
+      }
+
+      return await context.newPage();
+    },
+  };
 }
 
 async function discoverFileTests(options: {

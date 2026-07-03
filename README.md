@@ -86,6 +86,12 @@ inpagerun test ./home.inpagerun.test.ts
 inpagerun test "./tests/**/*.inpagerun.test.ts"
 ```
 
+Load unpacked Chromium extensions while running tests:
+
+```bash
+inpagerun test --extension ./my-extension
+```
+
 Each test file declares its target page URLs with `createTest(...)`:
 
 ```ts

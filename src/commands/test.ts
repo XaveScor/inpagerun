@@ -1,10 +1,12 @@
 import { Command } from "commander";
+import { resolve } from "node:path";
 import { writeConsoleMessage, writeLine } from "../console-output";
 import { runTestFiles, type TestRunResult } from "../run-tests";
 import { parseCommand, resolveCommandContext, type CommandContext } from "./types";
 
 type TestOptions = {
   debug?: boolean;
+  extension: string[];
 };
 
 export async function runTestCommand(argv: string[], context?: CommandContext): Promise<void> {
@@ -24,12 +26,16 @@ function createTestProgram(context: ReturnType<typeof resolveCommandContext>): C
         context.stdout.write(text);
       },
     })
-    .usage("[files...] [--debug]")
+    .usage("[files...] [--debug] [--extension <path>]")
     .argument("[files...]", "Test files or globs")
     .option("--debug", "Forward browser console.debug output to stdout")
+    .option("--extension <path>", "Load an unpacked Chromium extension", collect, [])
     .action(async (files: string[], options: TestOptions) => {
       const result = await runTestFiles({
         cwd: context.cwd,
+        extensions: options.extension.map((path) => ({
+          path: resolve(context.cwd ?? process.cwd(), path),
+        })),
         files,
         onConsole(message) {
           return writeConsoleMessage(message, {
@@ -38,6 +44,7 @@ function createTestProgram(context: ReturnType<typeof resolveCommandContext>): C
             stdout: context.stdout,
           });
         },
+        tmpdir: context.tmpdir,
       });
 
       await writeTestReport(result, context.stdout);
@@ -48,6 +55,11 @@ function createTestProgram(context: ReturnType<typeof resolveCommandContext>): C
         throw error;
       }
     });
+}
+
+function collect(value: string, values: string[]): string[] {
+  values.push(value);
+  return values;
 }
 
 async function writeTestReport(
