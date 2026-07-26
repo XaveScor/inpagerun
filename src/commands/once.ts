@@ -1,13 +1,13 @@
 import { Command } from "commander";
 import { writeConsoleMessage } from "../console-output";
 import { runCode } from "../run-code";
-import { parseCommand, resolveCommandContext, type CommandContext } from "./types";
+import { type CommandContext, parseCommand, resolveCommandContext } from "./types";
 
-type OnceOptions = {
+interface OnceOptions {
   code: string;
   debug?: boolean;
   url: string;
-};
+}
 
 export async function runOnceCommand(argv: string[], context?: CommandContext): Promise<void> {
   const resolvedContext = resolveCommandContext(context);

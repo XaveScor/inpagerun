@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import { writeLine } from "../console-output";
 import { closeAllSessions } from "../session";
-import { parseCommand, resolveCommandContext, type CommandContext } from "./types";
+import { type CommandContext, parseCommand, resolveCommandContext } from "./types";
 
 export async function runCloseAllCommand(argv: string[], context?: CommandContext): Promise<void> {
   const resolvedContext = resolveCommandContext(context);

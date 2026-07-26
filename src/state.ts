@@ -2,29 +2,29 @@ import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir as osTmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
-export type BrowserState = {
+export interface BrowserState {
   headed: boolean;
   pid: number;
   port: number;
   userDataDir: string;
   wsEndpoint: string;
-};
+}
 
-export type ExtensionState = {
+export interface ExtensionState {
   path: string;
-};
+}
 
-export type SessionState = {
+export interface SessionState {
   browser: BrowserState;
   createdAt: number;
   extensions: ExtensionState[];
   pageTargetId: string;
   url: string;
-};
+}
 
-export type InpagerunState = {
+export interface InpagerunState {
   sessions: Record<string, SessionState>;
-};
+}
 
 export function getInpagerunTmpDir(tmpdir?: string): string {
   return join(tmpdir ?? osTmpdir(), "inpagerun");

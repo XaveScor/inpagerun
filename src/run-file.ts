@@ -1,37 +1,37 @@
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { chromium, type Page } from "playwright";
+import { type Page, chromium } from "playwright";
 import { normalizePageUrl } from "./url";
 
-export type RunFileConsoleMessage = {
+export interface RunFileConsoleMessage {
   type: string;
   text: string;
-};
+}
 
-export type RunFileOptions = {
+export interface RunFileOptions {
   url: string;
   file: string;
   callbackNames?: RunFileCallbackNames;
   onConsole?(message: RunFileConsoleMessage): Promise<void> | void;
-};
+}
 
-export type RunFileInPageOptions = {
+export interface RunFileInPageOptions {
   page: Page;
   file: string;
   callbackNames?: RunFileCallbackNames;
   onConsole?(message: RunFileConsoleMessage): Promise<void> | void;
-};
+}
 
-export type RunFileCallbackNames = {
+export interface RunFileCallbackNames {
   consoleFunctionName: string;
   doneFunctionName: string;
-};
+}
 
-type RunFileError = {
+interface RunFileError {
   name: string;
   message: string;
   stack?: string;
-};
+}
 
 type RunFileResult<TValue = unknown> =
   | {
@@ -58,8 +58,8 @@ export async function runFile(options: RunFileOptions): Promise<void> {
   await page.goto(normalizePageUrl(options.url), { waitUntil: "load" });
 
   return await runFileInPage({
-    file: options.file,
     callbackNames: options.callbackNames,
+    file: options.file,
     onConsole: options.onConsole,
     page,
   });

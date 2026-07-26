@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { runCode } from "../src/run-code";
 import type { RunFileConsoleMessage } from "../src/run-file";
-import { getCaseDir, readCaseCode, type TestCaseName } from "./helpers/cases";
+import { type TestCaseName, getCaseDir, readCaseCode } from "./helpers/cases";
 import { startDevServer } from "./helpers/dev-server";
 import { createTestTmpdir } from "./helpers/tmpdir";
 
@@ -14,7 +14,7 @@ describe("runCode", () => {
   ] as const)("runs the %s case", async (caseName, expectedText) => {
     const messages = await runSuccessfulCase(caseName);
 
-    expect(messages).toEqual([{ type: "log", text: expectedText }]);
+    expect(messages).toEqual([{ text: expectedText, type: "log" }]);
   });
 
   it("rejects incorrect static imports", async () => {
@@ -34,7 +34,7 @@ describe("runCode", () => {
       "Content-Security-Policy": "default-src 'self'; script-src 'none'",
     });
 
-    expect(messages).toEqual([{ type: "log", text: "csp-header-ok" }]);
+    expect(messages).toEqual([{ text: "csp-header-ok", type: "log" }]);
   });
 });
 

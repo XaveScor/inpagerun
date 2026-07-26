@@ -1,11 +1,11 @@
 import { Command } from "commander";
 import { writeLine } from "../console-output";
 import { closeSession } from "../session";
-import { parseCommand, resolveCommandContext, type CommandContext } from "./types";
+import { type CommandContext, parseCommand, resolveCommandContext } from "./types";
 
-type CloseOptions = {
+interface CloseOptions {
   id: string;
-};
+}
 
 export async function runCloseCommand(argv: string[], context?: CommandContext): Promise<void> {
   const resolvedContext = resolveCommandContext(context);

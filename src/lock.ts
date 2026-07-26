@@ -3,12 +3,12 @@ import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { getLocksDir, isProcessAlive } from "./state";
 
-export type LockOptions = {
+export interface LockOptions {
   busyMessage: string;
   timeoutMs?: number;
   tmpdir?: string;
   wait?: boolean;
-};
+}
 
 export async function withLock<T>(
   name: string,

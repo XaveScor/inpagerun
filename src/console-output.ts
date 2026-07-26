@@ -6,21 +6,25 @@ export async function writeConsoleMessage(
   options: { debugEnabled: boolean; stdout: Writable; stderr: Writable },
 ): Promise<void> {
   switch (message.type) {
-    case "debug":
+    case "debug": {
       if (!options.debugEnabled) {
         return;
       }
 
       await writeLine(options.stdout, message.text === "" ? "[DEBUG]" : `[DEBUG] ${message.text}`);
       return;
-    case "error":
+    }
+    case "error": {
       await writeLine(options.stderr, message.text);
       return;
-    case "warn":
+    }
+    case "warn": {
       await writeLine(options.stderr, message.text);
       return;
-    default:
+    }
+    default: {
       await writeLine(options.stdout, message.text);
+    }
   }
 }
 

@@ -1,19 +1,19 @@
 import type { Command } from "commander";
 import type { Writable } from "node:stream";
 
-export type CommandContext = {
+export interface CommandContext {
   cwd?: string;
   stdout?: Writable;
   stderr?: Writable;
   tmpdir?: string;
-};
+}
 
-export type ResolvedCommandContext = {
+export interface ResolvedCommandContext {
   cwd?: string;
   stdout: Writable;
   stderr: Writable;
   tmpdir?: string;
-};
+}
 
 export function resolveCommandContext(context: CommandContext = {}): ResolvedCommandContext {
   return {

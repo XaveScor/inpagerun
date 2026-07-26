@@ -2,13 +2,13 @@ import { Command } from "commander";
 import { resolve } from "node:path";
 import { writeLine } from "../console-output";
 import { openSession } from "../session";
-import { parseCommand, resolveCommandContext, type CommandContext } from "./types";
+import { type CommandContext, parseCommand, resolveCommandContext } from "./types";
 
-type OpenOptions = {
+interface OpenOptions {
   debug?: boolean;
   extension: string[];
   headed?: boolean;
-};
+}
 
 export async function runOpenCommand(argv: string[], context?: CommandContext): Promise<void> {
   const resolvedContext = resolveCommandContext(context);

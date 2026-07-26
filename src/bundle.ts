@@ -1,25 +1,25 @@
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { build } from "vite";
 import { inpagerunDynamicImportPlugin } from "./inpagerun-dynamic-import-plugin";
-import { inpagerunResolvePlugin, USER_MODULE_ID } from "./inpagerun-resolve-plugin";
+import { USER_MODULE_ID, inpagerunResolvePlugin } from "./inpagerun-resolve-plugin";
 
-export type BundleOptions = {
+export interface BundleOptions {
   code: string;
   cwd?: string;
   consoleFunctionName?: string;
   doneFunctionName?: string;
   mode?: "run" | "test-discovery" | "test-execution";
   testUrl?: string;
-};
+}
 
-export type BundleArtifact = {
+export interface BundleArtifact {
   file: string;
   dispose(): Promise<void>;
   [Symbol.asyncDispose](): Promise<void>;
-};
+}
 
 const BUNDLE_FILE_NAME = "bundle.js";
 const USER_MODULE_FILE_NAME = "__inpagerun_user_code__.ts";
@@ -46,19 +46,6 @@ export async function bundle(options: BundleOptions): Promise<BundleArtifact> {
 
     await build({
       appType: "custom",
-      configFile: false,
-      logLevel: "silent",
-      publicDir: false,
-      root: cwd,
-      plugins: [
-        inpagerunResolvePlugin({ code: options.code, userModuleFile }),
-        inpagerunDynamicImportPlugin(),
-      ],
-      resolve: {
-        alias: {
-          chai: require.resolve("chai"),
-        },
-      },
       build: {
         dynamicImportVarsOptions: {
           exclude: [/.*/],
@@ -80,6 +67,19 @@ export async function bundle(options: BundleOptions): Promise<BundleArtifact> {
         target: "esnext",
         write: true,
       },
+      configFile: false,
+      logLevel: "silent",
+      plugins: [
+        inpagerunResolvePlugin({ code: options.code, userModuleFile }),
+        inpagerunDynamicImportPlugin(),
+      ],
+      publicDir: false,
+      resolve: {
+        alias: {
+          chai: require.resolve("chai"),
+        },
+      },
+      root: cwd,
     });
   } catch (error) {
     await rm(tempDir, { force: true, recursive: true });

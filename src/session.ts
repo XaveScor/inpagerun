@@ -10,42 +10,42 @@ import { withLock } from "./lock";
 import { withSessionLock } from "./session-lock";
 import { runTarget } from "./run-target";
 import type { RunFileConsoleMessage } from "./run-file";
-import { readState, removeState, writeState, type ExtensionState } from "./state";
+import { type ExtensionState, readState, removeState, writeState } from "./state";
 
-export type ExtensionOptions = {
+export interface ExtensionOptions {
   path: string;
-};
+}
 
-export type OpenSessionOptions = {
+export interface OpenSessionOptions {
   debug?(message: string): Promise<void> | void;
   extensions?: ExtensionOptions[];
   headed: boolean;
   tmpdir?: string;
   url: string;
-};
+}
 
-export type OpenSessionResult = {
+export interface OpenSessionResult {
   id: string;
-};
+}
 
-export type RunSessionOptions = {
+export interface RunSessionOptions {
   code: string;
   cwd?: string;
   id: string;
   onConsole?(message: RunFileConsoleMessage): Promise<void> | void;
   tmpdir?: string;
-};
+}
 
-export type CloseSessionResult = {
+export interface CloseSessionResult {
   url: string;
-};
+}
 
-export type CloseAllSessionsResult = {
+export interface CloseAllSessionsResult {
   sessions: Array<{
     id: string;
     url: string;
   }>;
-};
+}
 
 export async function openSession(options: OpenSessionOptions): Promise<OpenSessionResult> {
   return await withStateLock(options.tmpdir, async () => {
@@ -123,27 +123,30 @@ export async function closeSession(
   id: string,
   options: { tmpdir?: string } = {},
 ): Promise<CloseSessionResult> {
-  return await withSessionLock(id, options.tmpdir, async () => {
-    return await withStateLock(options.tmpdir, async () => {
-      const state = await readState(options.tmpdir);
-      const sessionState = state?.sessions[id];
+  return await withSessionLock(
+    id,
+    options.tmpdir,
+    async () =>
+      await withStateLock(options.tmpdir, async () => {
+        const state = await readState(options.tmpdir);
+        const sessionState = state?.sessions[id];
 
-      if (!state || !sessionState) {
-        throw new Error(`Unknown session id: ${id}`);
-      }
+        if (!state || !sessionState) {
+          throw new Error(`Unknown session id: ${id}`);
+        }
 
-      await closeDetachedBrowser(sessionState.browser);
-      delete state.sessions[id];
+        await closeDetachedBrowser(sessionState.browser);
+        delete state.sessions[id];
 
-      if (Object.keys(state.sessions).length === 0) {
-        await removeState(options.tmpdir);
-      } else {
-        await writeState(state, options.tmpdir);
-      }
+        if (Object.keys(state.sessions).length === 0) {
+          await removeState(options.tmpdir);
+        } else {
+          await writeState(state, options.tmpdir);
+        }
 
-      return { url: sessionState.url };
-    });
-  });
+        return { url: sessionState.url };
+      }),
+  );
 }
 
 export async function closeAllSessions(
@@ -154,7 +157,9 @@ export async function closeAllSessions(
 
     return Object.entries(state?.sessions ?? {})
       .map(([id, session]) => ({ createdAt: session.createdAt, id }))
-      .sort((left, right) => left.createdAt - right.createdAt || left.id.localeCompare(right.id));
+      .toSorted(
+        (left, right) => left.createdAt - right.createdAt || left.id.localeCompare(right.id),
+      );
   });
   const closedSessions: CloseAllSessionsResult["sessions"] = [];
 

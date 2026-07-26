@@ -1,14 +1,14 @@
 import { Command } from "commander";
 import { resolve } from "node:path";
 import { writeConsoleMessage, writeLine } from "../console-output";
-import { runTestFiles, type TestRunResult } from "../run-tests";
-import { parseCommand, resolveCommandContext, type CommandContext } from "./types";
+import { type TestRunResult, runTestFiles } from "../run-tests";
+import { type CommandContext, parseCommand, resolveCommandContext } from "./types";
 
-type TestOptions = {
+interface TestOptions {
   debug?: boolean;
   extension: string[];
   headed?: boolean;
-};
+}
 
 export async function runTestCommand(argv: string[], context?: CommandContext): Promise<void> {
   const resolvedContext = resolveCommandContext(context);

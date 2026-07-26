@@ -1,10 +1,10 @@
 import type { OutgoingHttpHeaders } from "node:http";
-import { createServer, type ViteDevServer } from "vite";
+import { type ViteDevServer, createServer } from "vite";
 
-export type TestDevServer = {
+export interface TestDevServer {
   url: string;
   close(): Promise<void>;
-};
+}
 
 export async function startDevServer(options: {
   root: string;
@@ -25,10 +25,10 @@ export async function startDevServer(options: {
   await server.listen(0);
 
   return {
-    url: getLocalServerUrl(server),
     close() {
       return server.close();
     },
+    url: getLocalServerUrl(server),
   };
 }
 

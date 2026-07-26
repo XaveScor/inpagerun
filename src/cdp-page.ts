@@ -1,9 +1,9 @@
 import type { Browser, Page } from "playwright";
 import { normalizePageUrl } from "./url";
 
-type TargetInfo = {
+interface TargetInfo {
   targetId: string;
-};
+}
 
 export async function openPageTarget(
   browser: Browser,
@@ -25,7 +25,7 @@ export async function findPageByTargetId(
 ): Promise<Page | undefined> {
   for (const context of browser.contexts()) {
     for (const page of context.pages()) {
-      if ((await getPageTargetId(page).catch(() => undefined)) === targetId) {
+      if ((await getPageTargetId(page).catch(() => {})) === targetId) {
         return page;
       }
     }

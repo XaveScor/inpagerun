@@ -1,57 +1,57 @@
-import { readdir, readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { chromium } from "playwright";
 import { closeDetachedBrowser, connectDetachedBrowser, startDetachedBrowser } from "./browser-host";
 import { bundle } from "./bundle";
-import { createRunFileCallbackNames, runFileInPage, type RunFileConsoleMessage } from "./run-file";
+import { type RunFileConsoleMessage, createRunFileCallbackNames, runFileInPage } from "./run-file";
 import type { ExtensionState } from "./state";
 import { normalizePageUrl } from "./url";
 
-export type TestRunError = {
+export interface TestRunError {
   name: string;
   message: string;
   stack?: string;
-};
+}
 
-export type TestCaseResult = {
+export interface TestCaseResult {
   name: string;
   status: "passed" | "failed";
   error?: TestRunError;
-};
+}
 
-export type TestUrlResult = {
+export interface TestUrlResult {
   url: string;
   tests: TestCaseResult[];
-};
+}
 
-export type TestFileResult = {
+export interface TestFileResult {
   file: string;
   urls: TestUrlResult[];
   error?: TestRunError;
-};
+}
 
-export type TestRunResult = {
+export interface TestRunResult {
   files: TestFileResult[];
-};
+}
 
-export type RunTestFilesOptions = {
+export interface RunTestFilesOptions {
   cwd?: string;
   extensions?: ExtensionState[];
   files?: string[];
   headed?: boolean;
   onConsole?(message: RunFileConsoleMessage): Promise<void> | void;
   tmpdir?: string;
-};
+}
 
-type DiscoveryResult = {
+interface DiscoveryResult {
   suites: Array<{
     suiteIndex: number;
     urls: string[];
     tests: Array<{ name: string; testIndex: number }>;
   }>;
-};
+}
 
-type ExecutionResult = {
+interface ExecutionResult {
   url: string;
   tests: Array<{
     name: string;
@@ -60,7 +60,7 @@ type ExecutionResult = {
     testIndex: number;
     error?: TestRunError;
   }>;
-};
+}
 
 const DEFAULT_TEST_FILE_PATTERN = /\.inpagerun\.test\.tsx?$/;
 const IGNORED_DIRS = new Set([".git", "node_modules", "dist", "build", "coverage", ".coverage"]);
@@ -94,12 +94,12 @@ export async function runTestFiles(options: RunTestFilesOptions = {}): Promise<T
 
       if (urls.length === 0 || countDiscoveredTests(discovery) === 0) {
         results.push({
+          error: {
+            message: "No tests registered. Use createTest(...urls).",
+            name: "Error",
+          },
           file: relativeFile,
           urls: [],
-          error: {
-            name: "Error",
-            message: "No tests registered. Use createTest(...urls).",
-          },
         });
         continue;
       }
@@ -145,7 +145,7 @@ export async function runTestFiles(options: RunTestFilesOptions = {}): Promise<T
 
       results.push({ file: relativeFile, urls: urlResults });
     } catch (error) {
-      results.push({ file: relativeFile, urls: [], error: normalizeError(error) });
+      results.push({ error: normalizeError(error), file: relativeFile, urls: [] });
     }
   }
 
@@ -265,7 +265,7 @@ async function resolveTestFiles(cwd: string, patterns: string[]): Promise<string
       ? allFiles.filter((file) => DEFAULT_TEST_FILE_PATTERN.test(file))
       : allFiles.filter((file) => patterns.some((pattern) => matchesPattern(cwd, file, pattern)));
 
-  return [...new Set(files)].sort((left, right) => left.localeCompare(right));
+  return [...new Set(files)].toSorted((left, right) => left.localeCompare(right));
 }
 
 async function walkFiles(root: string): Promise<string[]> {
@@ -336,7 +336,7 @@ function globToRegExp(pattern: string): RegExp {
 }
 
 function escapeRegExp(value: string): string {
-  return value.replace(/[|\\{}()[\]^$+?.]/g, "\\$&");
+  return value.replaceAll(/[|\\{}()[\]^$+?.]/g, String.raw`\$&`);
 }
 
 function normalizePath(path: string): string {
@@ -353,8 +353,8 @@ function countDiscoveredTests(discovery: DiscoveryResult): number {
 
 function normalizeError(error: unknown): TestRunError {
   if (error instanceof Error) {
-    return { name: error.name, message: error.message, stack: error.stack };
+    return { message: error.message, name: error.name, stack: error.stack };
   }
 
-  return { name: "Error", message: String(error) };
+  return { message: String(error), name: "Error" };
 }

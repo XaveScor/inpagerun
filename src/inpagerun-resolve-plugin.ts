@@ -15,8 +15,23 @@ const NODE_BUILTINS = new Set(
 
 export function inpagerunResolvePlugin(options: { code: string; userModuleFile: string }): Plugin {
   return {
-    name: "inpagerun-resolve",
     enforce: "pre",
+    load(id) {
+      if (id === TEST_MODULE_ID) {
+        return `
+export function createTest(...urls) {
+  return globalThis.__inpagerunCreateTest(...urls);
+}
+`;
+      }
+
+      if (id === options.userModuleFile) {
+        return createUserCodeSource(options.code);
+      }
+
+      return null;
+    },
+    name: "inpagerun-resolve",
     resolveId(source) {
       if (source === "inpagerun/test") {
         return TEST_MODULE_ID;
@@ -30,21 +45,6 @@ export function inpagerunResolvePlugin(options: { code: string; userModuleFile: 
         this.error(
           `Node module "${source}" cannot be imported because inpagerun code runs in the browser page.`,
         );
-      }
-
-      return null;
-    },
-    load(id) {
-      if (id === TEST_MODULE_ID) {
-        return `
-export function createTest(...urls) {
-  return globalThis.__inpagerunCreateTest(...urls);
-}
-`;
-      }
-
-      if (id === options.userModuleFile) {
-        return createUserCodeSource(options.code);
       }
 
       return null;

@@ -1,13 +1,13 @@
 import { bundle } from "./bundle";
-import { createRunFileCallbackNames, runFileInPage, type RunFileConsoleMessage } from "./run-file";
+import { type RunFileConsoleMessage, createRunFileCallbackNames, runFileInPage } from "./run-file";
 import type { Page } from "playwright";
 
-export type RunTargetOptions = {
+export interface RunTargetOptions {
   code: string;
   cwd?: string;
   onConsole?(message: RunFileConsoleMessage): Promise<void> | void;
   page: Page;
-};
+}
 
 export async function runTarget(options: RunTargetOptions): Promise<void> {
   const callbackNames = createRunFileCallbackNames();

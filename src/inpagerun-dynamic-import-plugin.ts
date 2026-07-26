@@ -2,8 +2,8 @@ import type { Plugin } from "vite";
 
 export function inpagerunDynamicImportPlugin(): Plugin {
   return {
-    name: "inpagerun-dynamic-import",
     enforce: "post",
+    name: "inpagerun-dynamic-import",
     transform(code, _id, options) {
       if (!isJavaScriptModuleType(options?.moduleType)) {
         return null;
@@ -29,13 +29,13 @@ function isJavaScriptModuleType(moduleType: string | undefined): boolean {
   return moduleType === undefined || ["js", "jsx", "ts", "tsx"].includes(moduleType);
 }
 
-type AstNode = {
+interface AstNode {
   type?: string;
   source?: AstNode;
   value?: unknown;
   start?: number;
   [key: string]: unknown;
-};
+}
 
 function rejectNonLiteralDynamicImports(ast: unknown, onError: (position?: number) => never): void {
   walkAst(ast, (node) => {

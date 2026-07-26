@@ -5,23 +5,23 @@ import { createServer } from "node:net";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { spawn } from "node:child_process";
-import { chromium, type Browser } from "playwright";
+import { type Browser, chromium } from "playwright";
 import {
-  getInpagerunTmpDir,
-  isProcessAlive,
   type BrowserState,
   type ExtensionState,
+  getInpagerunTmpDir,
+  isProcessAlive,
 } from "./state";
 
 const require = createRequire(import.meta.url);
 const playwrightPackage = require("playwright/package.json") as { version: string };
 
-export type StartDetachedBrowserOptions = {
+export interface StartDetachedBrowserOptions {
   debug?(message: string): Promise<void> | void;
   extensions?: ExtensionState[];
   headed: boolean;
   tmpdir?: string;
-};
+}
 
 export async function connectDetachedBrowser(browser: BrowserState): Promise<Browser> {
   return await chromium.connectOverCDP(browser.wsEndpoint);
@@ -61,8 +61,7 @@ export async function startDetachedBrowser(
 
   if (extensionPaths.length > 0) {
     const joined = extensionPaths.join(",");
-    args.push(`--disable-extensions-except=${joined}`);
-    args.push(`--load-extension=${joined}`);
+    args.push(`--disable-extensions-except=${joined}`, `--load-extension=${joined}`);
   }
 
   if (!options.headed) {

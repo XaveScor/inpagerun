@@ -6,7 +6,7 @@ import { runOnceCommand } from "./commands/once";
 import { runOpenCommand } from "./commands/open";
 import { runPersistentRunCommand } from "./commands/run";
 import { runTestCommand } from "./commands/test";
-import { resolveCommandContext, type CommandContext } from "./commands/types";
+import { type CommandContext, resolveCommandContext } from "./commands/types";
 
 const AGENT_SKILL_HELP =
   "Agent and LLM guidance: https://github.com/XaveScor/inpagerun/blob/master/SKILL/inpagerun/SKILL.md";
@@ -16,27 +16,33 @@ export async function runCli(argv: string[], context?: CommandContext): Promise<
   const [mode, ...rest] = argv;
 
   switch (mode) {
-    case "once":
+    case "once": {
       await runOnceCommand(rest, resolvedContext);
       return;
-    case "open":
+    }
+    case "open": {
       await runOpenCommand(rest, resolvedContext);
       return;
-    case "test":
+    }
+    case "test": {
       await runTestCommand(rest, resolvedContext);
       return;
-    case "close":
+    }
+    case "close": {
       await runCloseCommand(rest, resolvedContext);
       return;
-    case "closeall":
+    }
+    case "closeall": {
       await runCloseAllCommand(rest, resolvedContext);
       return;
+    }
     case "--help":
     case "-h":
-    case undefined:
+    case undefined: {
       await writeLine(resolvedContext.stdout, getCliHelp().trimEnd());
       return;
-    default:
+    }
+    default: {
       if (argv.includes("-u") || argv.includes("--url")) {
         throw new Error(
           "This syntax is no longer supported. Use: inpagerun once -u <url> -c <code>",
@@ -44,6 +50,7 @@ export async function runCli(argv: string[], context?: CommandContext): Promise<
       }
 
       await runPersistentRunCommand(argv, resolvedContext);
+    }
   }
 }
 

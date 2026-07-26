@@ -1,13 +1,13 @@
 import { Command } from "commander";
 import { writeConsoleMessage } from "../console-output";
 import { runCodeInSession } from "../session";
-import { parseCommand, resolveCommandContext, type CommandContext } from "./types";
+import { type CommandContext, parseCommand, resolveCommandContext } from "./types";
 
-type RunOptions = {
+interface RunOptions {
   code: string;
   debug?: boolean;
   id: string;
-};
+}
 
 export async function runPersistentRunCommand(
   argv: string[],
