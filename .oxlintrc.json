@@ -1,0 +1,41 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc", "node"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "pedantic": "warn",
+    "perf": "warn",
+    "style": "warn",
+    "restriction": "warn"
+  },
+  "env": {
+    "builtin": true
+  },
+  "ignorePatterns": ["test/cases", "dist"],
+  "rules": {
+    "no-await-in-loop": "off",
+    "no-console": "off",
+    "no-magic-numbers": "off",
+    "no-use-before-define": "off",
+    "func-style": "off",
+    "id-length": "off",
+    "init-declarations": "off",
+    "max-lines": "off",
+    "max-lines-per-function": "off",
+    "max-statements": "off",
+    "no-continue": "off",
+    "no-empty": "off",
+    "no-empty-function": "off",
+    "no-null": "off",
+    "no-ternary": "off",
+    "no-undefined": "off",
+    "no-void": "off",
+    "no-await-expression-member": "off",
+    "no-dynamic-delete": "off",
+    "require-unicode-regexp": "off",
+    "node/no-top-level-await": "off",
+    "oxc/no-async-await": "off",
+    "oxc/no-optional-chaining": "off"
+  }
+}
