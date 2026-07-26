@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { access, mkdir, mkdtemp, rm, stat } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { createServer } from "node:net";
-import { join } from "node:path";
+import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { spawn } from "node:child_process";
 import { type Browser, chromium } from "playwright";
@@ -48,7 +48,7 @@ export async function startDetachedBrowser(
   await mkdir(rootDir, { recursive: true });
   await validateExtensionDirectories(options.extensions ?? []);
 
-  const userDataDir = await mkdtemp(join(rootDir, "profile-"));
+  const userDataDir = await mkdtemp(path.join(rootDir, "profile-"));
   const args = [
     `--remote-debugging-port=${port}`,
     `--user-data-dir=${userDataDir}`,

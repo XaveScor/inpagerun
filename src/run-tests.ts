@@ -1,5 +1,5 @@
 import { readFile, readdir } from "node:fs/promises";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import path from "node:path";
 import { chromium } from "playwright";
 import { closeDetachedBrowser, connectDetachedBrowser, startDetachedBrowser } from "./browser-host";
 import { bundle } from "./bundle";
@@ -66,7 +66,7 @@ const DEFAULT_TEST_FILE_PATTERN = /\.inpagerun\.test\.tsx?$/;
 const IGNORED_DIRS = new Set([".git", "node_modules", "dist", "build", "coverage", ".coverage"]);
 
 export async function runTestFiles(options: RunTestFilesOptions = {}): Promise<TestRunResult> {
-  const cwd = resolve(options.cwd ?? process.cwd());
+  const cwd = path.resolve(options.cwd ?? process.cwd());
   const files = await resolveTestFiles(cwd, options.files ?? []);
   const executionBrowser = await startExecutionBrowser({
     extensions: options.extensions ?? [],
@@ -85,7 +85,7 @@ export async function runTestFiles(options: RunTestFilesOptions = {}): Promise<T
   const results: TestFileResult[] = [];
 
   for (const file of files) {
-    const relativeFile = relative(cwd, file) || file;
+    const relativeFile = path.relative(cwd, file) || file;
 
     try {
       const code = await readFile(file, "utf8");
@@ -203,7 +203,7 @@ async function discoverFileTests(options: {
   await using artifact = await bundle({
     code: options.code,
     consoleFunctionName: callbackNames.consoleFunctionName,
-    cwd: dirname(options.file),
+    cwd: path.dirname(options.file),
     doneFunctionName: callbackNames.doneFunctionName,
     mode: "test-discovery",
   });
@@ -244,7 +244,7 @@ async function executeFileTests(options: {
   await using artifact = await bundle({
     code: options.code,
     consoleFunctionName: callbackNames.consoleFunctionName,
-    cwd: dirname(options.file),
+    cwd: path.dirname(options.file),
     doneFunctionName: callbackNames.doneFunctionName,
     mode: "test-execution",
     testUrl: options.url,
@@ -273,18 +273,18 @@ async function walkFiles(root: string): Promise<string[]> {
   const files: string[] = [];
 
   for (const entry of entries) {
-    const path = join(root, entry.name);
+    const fullPath = path.join(root, entry.name);
 
     if (entry.isDirectory()) {
       if (!IGNORED_DIRS.has(entry.name)) {
-        files.push(...(await walkFiles(path)));
+        files.push(...(await walkFiles(fullPath)));
       }
 
       continue;
     }
 
     if (entry.isFile()) {
-      files.push(path);
+      files.push(fullPath);
     }
   }
 
@@ -293,8 +293,8 @@ async function walkFiles(root: string): Promise<string[]> {
 
 function matchesPattern(cwd: string, file: string, pattern: string): boolean {
   const normalizedPattern = normalizePath(pattern);
-  const relativeFile = normalizePath(relative(cwd, file));
-  const absolutePattern = normalizePath(resolve(cwd, pattern));
+  const relativeFile = normalizePath(path.relative(cwd, file));
+  const absolutePattern = normalizePath(path.resolve(cwd, pattern));
   const absoluteFile = normalizePath(file);
 
   if (!hasGlobSyntax(pattern)) {
@@ -339,8 +339,8 @@ function escapeRegExp(value: string): string {
   return value.replaceAll(/[|\\{}()[\]^$+?.]/g, String.raw`\$&`);
 }
 
-function normalizePath(path: string): string {
-  return path.split(sep).join("/");
+function normalizePath(filePath: string): string {
+  return filePath.split(path.sep).join("/");
 }
 
 function uniqueUrls(discovery: DiscoveryResult): string[] {

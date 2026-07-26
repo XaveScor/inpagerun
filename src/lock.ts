@@ -1,5 +1,5 @@
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { getLocksDir, isProcessAlive } from "./state";
 
@@ -87,7 +87,7 @@ async function readLockPid(lockFile: string): Promise<number | undefined> {
 }
 
 function getLockFile(name: string, tmpdir?: string): string {
-  return join(getLocksDir(tmpdir), `${name.replaceAll(/[^a-zA-Z0-9._-]/g, "_")}.lock`);
+  return path.join(getLocksDir(tmpdir), `${name.replaceAll(/[^a-zA-Z0-9._-]/g, "_")}.lock`);
 }
 
 function isAlreadyExistsError(error: unknown): boolean {

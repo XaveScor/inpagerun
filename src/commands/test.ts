@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { resolve } from "node:path";
+import path from "node:path";
 import { writeConsoleMessage, writeLine } from "../console-output";
 import { type TestRunResult, runTestFiles } from "../run-tests";
 import { type CommandContext, parseCommand, resolveCommandContext } from "./types";
@@ -35,8 +35,8 @@ function createTestProgram(context: ReturnType<typeof resolveCommandContext>): C
     .action(async (files: string[], options: TestOptions) => {
       const result = await runTestFiles({
         cwd: context.cwd,
-        extensions: options.extension.map((path) => ({
-          path: resolve(context.cwd ?? process.cwd(), path),
+        extensions: options.extension.map((extensionPath) => ({
+          path: path.resolve(context.cwd ?? process.cwd(), extensionPath),
         })),
         files,
         headed: options.headed === true,

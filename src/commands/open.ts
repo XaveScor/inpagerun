@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { resolve } from "node:path";
+import path from "node:path";
 import { writeLine } from "../console-output";
 import { openSession } from "../session";
 import { type CommandContext, parseCommand, resolveCommandContext } from "./types";
@@ -39,8 +39,8 @@ function createOpenProgram(context: ReturnType<typeof resolveCommandContext>): C
             return writeLine(context.stderr, `[DEBUG] ${message}`);
           }
         },
-        extensions: options.extension.map((path) => ({
-          path: resolve(context.cwd ?? process.cwd(), path),
+        extensions: options.extension.map((extensionPath) => ({
+          path: path.resolve(context.cwd ?? process.cwd(), extensionPath),
         })),
         headed: options.headed === true,
         tmpdir: context.tmpdir,

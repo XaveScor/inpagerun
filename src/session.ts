@@ -1,4 +1,4 @@
-import { resolve } from "node:path";
+import path from "node:path";
 import {
   closeDetachedBrowser,
   connectDetachedBrowser,
@@ -172,7 +172,7 @@ export async function closeAllSessions(
 }
 
 function normalizeExtensions(extensions: ExtensionOptions[]): ExtensionState[] {
-  return extensions.map((extension) => ({ path: resolve(extension.path) }));
+  return extensions.map((extension) => ({ path: path.resolve(extension.path) }));
 }
 
 function withStateLock<T>(tmpdir: string | undefined, run: () => Promise<T>): Promise<T> {

@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import path from "node:path";
 import { build } from "vite";
 import { inpagerunDynamicImportPlugin } from "./inpagerun-dynamic-import-plugin";
 import { USER_MODULE_ID, inpagerunResolvePlugin } from "./inpagerun-resolve-plugin";
@@ -26,11 +26,11 @@ const USER_MODULE_FILE_NAME = "__inpagerun_user_code__.ts";
 const require = createRequire(import.meta.url);
 
 export async function bundle(options: BundleOptions): Promise<BundleArtifact> {
-  const cwd = options.cwd ? resolve(options.cwd) : process.cwd();
-  const tempDir = await mkdtemp(join(tmpdir(), "inpagerun-"));
-  const outDir = join(tempDir, "dist");
-  const entryFile = join(tempDir, "entry.ts");
-  const userModuleFile = join(cwd, USER_MODULE_FILE_NAME);
+  const cwd = options.cwd ? path.resolve(options.cwd) : process.cwd();
+  const tempDir = await mkdtemp(path.join(tmpdir(), "inpagerun-"));
+  const outDir = path.join(tempDir, "dist");
+  const entryFile = path.join(tempDir, "entry.ts");
+  const userModuleFile = path.join(cwd, USER_MODULE_FILE_NAME);
 
   try {
     await mkdir(outDir, { recursive: true });
@@ -98,7 +98,7 @@ export async function bundle(options: BundleOptions): Promise<BundleArtifact> {
   };
 
   return {
-    file: join(outDir, BUNDLE_FILE_NAME),
+    file: path.join(outDir, BUNDLE_FILE_NAME),
     dispose,
     [Symbol.asyncDispose]: dispose,
   };

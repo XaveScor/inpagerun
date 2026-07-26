@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { getCliHelp, runCli } from "../src/cli";
 import { runCloseCommand } from "../src/commands/close";
@@ -143,7 +143,7 @@ createTest("__URL__");
     const stderr = createMemoryWritable();
 
     try {
-      const file = join(tmpdir.path, "extension.inpagerun.test.ts");
+      const file = path.join(tmpdir.path, "extension.inpagerun.test.ts");
       await writeFile(
         file,
         `
@@ -166,7 +166,7 @@ test("extension content script runs", async () => {
         "utf8",
       );
 
-      await runCli(["test", "--extension", join(pageDir, "extension")], {
+      await runCli(["test", "--extension", path.join(pageDir, "extension")], {
         cwd: tmpdir.path,
         stderr: stderr.stream,
         stdout: stdout.stream,
@@ -488,7 +488,7 @@ test("extension content script runs", async () => {
       id = stdout.output().trim();
       const state = await readState(tmpdir.path);
 
-      expect(state?.sessions[id]?.extensions).toEqual([{ path: join(caseDir, "extension") }]);
+      expect(state?.sessions[id]?.extensions).toEqual([{ path: path.join(caseDir, "extension") }]);
       expect(stderr.output()).toBe("");
     } finally {
       if (id) {
@@ -566,7 +566,7 @@ async function runTestCaseInternal(
   const stderr = createMemoryWritable();
 
   try {
-    const file = join(tmpdir.path, "sample.inpagerun.test.ts");
+    const file = path.join(tmpdir.path, "sample.inpagerun.test.ts");
     await writeFile(file, source.replaceAll("__URL__", server.url), "utf8");
     const run = runCli(["test"], {
       cwd: tmpdir.path,

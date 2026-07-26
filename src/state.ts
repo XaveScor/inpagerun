@@ -1,6 +1,6 @@
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir as osTmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import path from "node:path";
 
 export interface BrowserState {
   headed: boolean;
@@ -27,15 +27,15 @@ export interface InpagerunState {
 }
 
 export function getInpagerunTmpDir(tmpdir?: string): string {
-  return join(tmpdir ?? osTmpdir(), "inpagerun");
+  return path.join(tmpdir ?? osTmpdir(), "inpagerun");
 }
 
 export function getStateFile(tmpdir?: string): string {
-  return join(getInpagerunTmpDir(tmpdir), "state.json");
+  return path.join(getInpagerunTmpDir(tmpdir), "state.json");
 }
 
 export function getLocksDir(tmpdir?: string): string {
-  return join(getInpagerunTmpDir(tmpdir), "locks");
+  return path.join(getInpagerunTmpDir(tmpdir), "locks");
 }
 
 export async function readState(tmpdir?: string): Promise<InpagerunState | undefined> {
@@ -52,7 +52,7 @@ export async function readState(tmpdir?: string): Promise<InpagerunState | undef
 
 export async function writeState(state: InpagerunState, tmpdir?: string): Promise<void> {
   const stateFile = getStateFile(tmpdir);
-  await mkdir(dirname(stateFile), { recursive: true });
+  await mkdir(path.dirname(stateFile), { recursive: true });
 
   const tempFile = `${stateFile}.${process.pid}.tmp`;
   await writeFile(tempFile, JSON.stringify(state, null, 2));
