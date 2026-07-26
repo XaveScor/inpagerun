@@ -2,7 +2,7 @@ import { Writable } from "node:stream";
 
 export interface MemoryWritable {
   stream: Writable;
-  output(): string;
+  output: () => string;
 }
 
 export function createMemoryWritable(): MemoryWritable {

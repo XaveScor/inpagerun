@@ -1,6 +1,6 @@
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
-import { chromium } from "playwright";
+import { type Page, chromium } from "playwright";
 import { closeDetachedBrowser, connectDetachedBrowser, startDetachedBrowser } from "./browser-host";
 import { bundle } from "./bundle";
 import { type RunFileConsoleMessage, createRunFileCallbackNames, runFileInPage } from "./run-file";
@@ -39,7 +39,7 @@ export interface RunTestFilesOptions {
   extensions?: ExtensionState[];
   files?: string[];
   headed?: boolean;
-  onConsole?(message: RunFileConsoleMessage): Promise<void> | void;
+  onConsole?: (message: RunFileConsoleMessage) => Promise<void> | void;
   tmpdir?: string;
 }
 
@@ -47,7 +47,7 @@ interface DiscoveryResult {
   suites: {
     suiteIndex: number;
     urls: string[];
-    tests: Array<{ name: string; testIndex: number }>;
+    tests: { name: string; testIndex: number }[];
   }[];
 }
 
@@ -156,7 +156,7 @@ async function startExecutionBrowser(options: {
   extensions: ExtensionState[];
   headed: boolean;
   tmpdir?: string;
-}): Promise<{ close(): Promise<void>; newPage(): Promise<import("playwright").Page> }> {
+}): Promise<{ close: () => Promise<void>; newPage: () => Promise<Page> }> {
   if (options.extensions.length === 0) {
     const browser = await chromium.launch({ headless: !options.headed });
 
@@ -197,7 +197,7 @@ async function startExecutionBrowser(options: {
 async function discoverFileTests(options: {
   code: string;
   file: string;
-  onConsole?(message: RunFileConsoleMessage): Promise<void> | void;
+  onConsole?: (message: RunFileConsoleMessage) => Promise<void> | void;
 }): Promise<DiscoveryResult> {
   const callbackNames = createRunFileCallbackNames();
   await using artifact = await bundle({
@@ -236,8 +236,8 @@ async function discoverFileTests(options: {
 async function executeFileTests(options: {
   code: string;
   file: string;
-  onConsole?(message: RunFileConsoleMessage): Promise<void> | void;
-  page: import("playwright").Page;
+  onConsole?: (message: RunFileConsoleMessage) => Promise<void> | void;
+  page: Page;
   url: string;
 }): Promise<ExecutionResult> {
   const callbackNames = createRunFileCallbackNames();

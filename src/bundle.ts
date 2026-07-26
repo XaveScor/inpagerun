@@ -17,8 +17,8 @@ export interface BundleOptions {
 
 export interface BundleArtifact {
   file: string;
-  dispose(): Promise<void>;
-  [Symbol.asyncDispose](): Promise<void>;
+  dispose: () => Promise<void>;
+  [Symbol.asyncDispose]: () => Promise<void>;
 }
 
 const BUNDLE_FILE_NAME = "bundle.js";

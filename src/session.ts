@@ -17,7 +17,7 @@ export interface ExtensionOptions {
 }
 
 export interface OpenSessionOptions {
-  debug?(message: string): Promise<void> | void;
+  debug?: (message: string) => Promise<void> | void;
   extensions?: ExtensionOptions[];
   headed: boolean;
   tmpdir?: string;
@@ -32,7 +32,7 @@ export interface RunSessionOptions {
   code: string;
   cwd?: string;
   id: string;
-  onConsole?(message: RunFileConsoleMessage): Promise<void> | void;
+  onConsole?: (message: RunFileConsoleMessage) => Promise<void> | void;
   tmpdir?: string;
 }
 

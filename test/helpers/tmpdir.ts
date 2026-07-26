@@ -4,7 +4,7 @@ import path from "node:path";
 
 export interface TestTmpdir {
   path: string;
-  close(): Promise<void>;
+  close: () => Promise<void>;
 }
 
 export async function createTestTmpdir(): Promise<TestTmpdir> {

@@ -5,7 +5,7 @@ import type { Page } from "playwright";
 export interface RunTargetOptions {
   code: string;
   cwd?: string;
-  onConsole?(message: RunFileConsoleMessage): Promise<void> | void;
+  onConsole?: (message: RunFileConsoleMessage) => Promise<void> | void;
   page: Page;
 }
 

@@ -17,7 +17,7 @@ const require = createRequire(import.meta.url);
 const playwrightPackage = require("playwright/package.json") as { version: string };
 
 export interface StartDetachedBrowserOptions {
-  debug?(message: string): Promise<void> | void;
+  debug?: (message: string) => Promise<void> | void;
   extensions?: ExtensionState[];
   headed: boolean;
   tmpdir?: string;

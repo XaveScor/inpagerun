@@ -12,14 +12,14 @@ export interface RunFileOptions {
   url: string;
   file: string;
   callbackNames?: RunFileCallbackNames;
-  onConsole?(message: RunFileConsoleMessage): Promise<void> | void;
+  onConsole?: (message: RunFileConsoleMessage) => Promise<void> | void;
 }
 
 export interface RunFileInPageOptions {
   page: Page;
   file: string;
   callbackNames?: RunFileCallbackNames;
-  onConsole?(message: RunFileConsoleMessage): Promise<void> | void;
+  onConsole?: (message: RunFileConsoleMessage) => Promise<void> | void;
 }
 
 export interface RunFileCallbackNames {

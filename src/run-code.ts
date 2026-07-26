@@ -5,7 +5,7 @@ export interface RunCodeOptions {
   url: string;
   code: string;
   cwd?: string;
-  onConsole?(message: RunFileConsoleMessage): Promise<void> | void;
+  onConsole?: (message: RunFileConsoleMessage) => Promise<void> | void;
   tmpdir?: string;
 }
 

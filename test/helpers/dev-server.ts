@@ -3,7 +3,7 @@ import { type ViteDevServer, createServer } from "vite";
 
 export interface TestDevServer {
   url: string;
-  close(): Promise<void>;
+  close: () => Promise<void>;
 }
 
 export async function startDevServer(options: {
