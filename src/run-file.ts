@@ -68,7 +68,7 @@ export async function runFile(options: RunFileOptions): Promise<void> {
 export async function runFileInPage<TValue = void>(options: RunFileInPageOptions): Promise<TValue> {
   const callbackNames = options.callbackNames ?? createRunFileCallbackNames();
 
-  const result = await new Promise<RunFileResult<TValue>>(async (resolve, reject) => {
+  const result = await new Promise<RunFileResult<TValue>>((resolve, reject) => {
     let settled = false;
 
     const finish = (callback: () => void) => {
@@ -80,25 +80,27 @@ export async function runFileInPage<TValue = void>(options: RunFileInPageOptions
       callback();
     };
 
-    try {
-      await options.page.exposeFunction(
-        callbackNames.doneFunctionName,
-        async (payload: RunFileResult<TValue>) => {
-          finish(() => resolve(payload));
-        },
-      );
+    void (async () => {
+      try {
+        await options.page.exposeFunction(
+          callbackNames.doneFunctionName,
+          (payload: RunFileResult<TValue>) => {
+            finish(() => resolve(payload));
+          },
+        );
 
-      await options.page.exposeFunction(
-        callbackNames.consoleFunctionName,
-        async (message: RunFileConsoleMessage) => {
-          await options.onConsole?.(message);
-        },
-      );
+        await options.page.exposeFunction(
+          callbackNames.consoleFunctionName,
+          async (message: RunFileConsoleMessage) => {
+            await options.onConsole?.(message);
+          },
+        );
 
-      await evaluateFileInPage(options.page, options.file);
-    } catch (error) {
-      finish(() => reject(error));
-    }
+        await evaluateFileInPage(options.page, options.file);
+      } catch (error) {
+        finish(() => reject(error));
+      }
+    })();
   });
 
   if (!result.ok) {

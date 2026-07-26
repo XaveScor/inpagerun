@@ -27,14 +27,17 @@ export async function runCode(options: RunCodeOptions): Promise<void> {
     });
   } catch (error) {
     primaryError = error;
-    throw error;
-  } finally {
-    try {
-      await closeSession(id, { tmpdir: options.tmpdir });
-    } catch (error) {
-      if (!primaryError) {
-        throw error;
-      }
+  }
+
+  try {
+    await closeSession(id, { tmpdir: options.tmpdir });
+  } catch (error) {
+    if (!primaryError) {
+      primaryError = error;
     }
+  }
+
+  if (primaryError) {
+    throw primaryError;
   }
 }
