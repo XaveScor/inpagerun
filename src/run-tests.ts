@@ -44,22 +44,22 @@ export interface RunTestFilesOptions {
 }
 
 interface DiscoveryResult {
-  suites: Array<{
+  suites: {
     suiteIndex: number;
     urls: string[];
     tests: Array<{ name: string; testIndex: number }>;
-  }>;
+  }[];
 }
 
 interface ExecutionResult {
   url: string;
-  tests: Array<{
+  tests: {
     name: string;
     status: "passed" | "failed";
     suiteIndex: number;
     testIndex: number;
     error?: TestRunError;
-  }>;
+  }[];
 }
 
 const DEFAULT_TEST_FILE_PATTERN = /\.inpagerun\.test\.tsx?$/;

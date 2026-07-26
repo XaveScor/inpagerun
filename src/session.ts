@@ -41,10 +41,10 @@ export interface CloseSessionResult {
 }
 
 export interface CloseAllSessionsResult {
-  sessions: Array<{
+  sessions: {
     id: string;
     url: string;
-  }>;
+  }[];
 }
 
 export async function openSession(options: OpenSessionOptions): Promise<OpenSessionResult> {
