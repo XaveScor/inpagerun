@@ -88,7 +88,7 @@ export async function bundle(options: BundleOptions): Promise<BundleArtifact> {
 
   let disposed = false;
 
-  const dispose = async () => {
+  const dispose = async (): Promise<void> => {
     if (disposed) {
       return;
     }
@@ -98,8 +98,8 @@ export async function bundle(options: BundleOptions): Promise<BundleArtifact> {
   };
 
   return {
-    file: path.join(outDir, BUNDLE_FILE_NAME),
     dispose,
+    file: path.join(outDir, BUNDLE_FILE_NAME),
     [Symbol.asyncDispose]: dispose,
   };
 }

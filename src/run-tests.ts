@@ -75,7 +75,7 @@ export async function runTestFiles(options: RunTestFilesOptions = {}): Promise<T
   });
 
   await using browserHandle = {
-    async [Symbol.asyncDispose]() {
+    async [Symbol.asyncDispose](): Promise<void> {
       await executionBrowser.close();
     },
   };
@@ -183,7 +183,7 @@ async function startExecutionBrowser(options: {
       await closeDetachedBrowser(browserState);
     },
     async newPage() {
-      const context = browser.contexts()[0];
+      const [context] = browser.contexts();
 
       if (!context) {
         throw new Error("Chromium extension browser did not expose a default context.");
@@ -211,7 +211,7 @@ async function discoverFileTests(options: {
   const browser = await chromium.launch();
 
   await using browserHandle = {
-    async [Symbol.asyncDispose]() {
+    async [Symbol.asyncDispose](): Promise<void> {
       await browser.close();
     },
   };

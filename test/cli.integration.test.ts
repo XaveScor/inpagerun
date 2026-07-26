@@ -575,11 +575,7 @@ async function runTestCaseInternal(
       tmpdir: tmpdir.path,
     });
 
-    if (expectFailure) {
-      await expect(run).rejects.toThrow("Test run failed");
-    } else {
-      await run;
-    }
+    await (expectFailure ? expect(run).rejects.toThrow("Test run failed") : run);
   } finally {
     await server.close();
     await tmpdir.close();

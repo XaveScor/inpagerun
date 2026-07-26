@@ -79,7 +79,7 @@ async function releaseLock(name: string, tmpdir?: string): Promise<void> {
 
 async function readLockPid(lockFile: string): Promise<number | undefined> {
   try {
-    const value = Number.parseInt(await readFile(lockFile, "utf8"), 10);
+    const value = Math.trunc(Number(await readFile(lockFile, "utf8")));
     return Number.isFinite(value) ? value : undefined;
   } catch {
     return undefined;

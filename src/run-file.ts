@@ -47,7 +47,7 @@ export async function runFile(options: RunFileOptions): Promise<void> {
   const browser = await chromium.launch();
 
   await using browserHandle = {
-    async [Symbol.asyncDispose]() {
+    async [Symbol.asyncDispose](): Promise<void> {
       await browser.close();
     },
   };
@@ -71,7 +71,7 @@ export async function runFileInPage<TValue = void>(options: RunFileInPageOptions
   const result = await new Promise<RunFileResult<TValue>>((resolve, reject) => {
     let settled = false;
 
-    const finish = (callback: () => void) => {
+    const finish = (callback: () => void): void => {
       if (settled) {
         return;
       }
@@ -80,7 +80,7 @@ export async function runFileInPage<TValue = void>(options: RunFileInPageOptions
       callback();
     };
 
-    void (async () => {
+    void (async (): Promise<void> => {
       try {
         await options.page.exposeFunction(
           callbackNames.doneFunctionName,

@@ -138,11 +138,9 @@ export async function closeSession(
         await closeDetachedBrowser(sessionState.browser);
         delete state.sessions[id];
 
-        if (Object.keys(state.sessions).length === 0) {
-          await removeState(options.tmpdir);
-        } else {
-          await writeState(state, options.tmpdir);
-        }
+        await (Object.keys(state.sessions).length === 0
+          ? removeState(options.tmpdir)
+          : writeState(state, options.tmpdir));
 
         return { url: sessionState.url };
       }),
