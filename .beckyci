@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "rootOptions": {
+    "baseModel": "openai/gpt-5.6-luna",
+    "reasoning_effort": "xhigh",
+    "timezone": "UTC"
+  },
+  "scenarios": [
+    {
+      "id": "improve-architecture",
+      "frequency": "05 17 * * *"
+    }
+  ]
+}
